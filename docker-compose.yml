@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # -----------------------------------------------------------------
   # POSTGRESQL DATABASE SERVICE
@@ -13,7 +11,7 @@ services:
       POSTGRES_PASSWORD: strong_password
       POSTGRES_DB: database_name
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -42,11 +40,11 @@ services:
     
     command: >
       bash -c "apt-get update && 
-               apt-get install -y openssl && 
+               apt-get install -y openssl libssl3 ca-certificates && 
                npm install && 
-               npx prisma migrate deploy &&
-               npx prisma generate &&
                npm run start:dev"
+
+  # (Optional) Add a migration runner for TypeORM later if needed
 
 volumes:
   postgres_data:

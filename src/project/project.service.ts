@@ -5,33 +5,29 @@ import {
   } from '@nestjs/common';
   import { CreateProjectDto } from './dto/create-project.dto';
   import { UpdateProjectDto } from './dto/update-project.dto';
-  import { PrismaService } from '../prisma/prisma.service'; 
+  import { InjectRepository } from '@nestjs/typeorm';
+  import { Repository } from 'typeorm';
+  import { Project } from '../database/entities/Project.entity';
   
   @Injectable()
   export class ProjectService {
-    constructor(private prisma: PrismaService) {}
+    constructor(
+      @InjectRepository(Project)
+      private readonly projectRepository: Repository<Project>,
+    ) {}
   
     async create(createProjectDto: CreateProjectDto) {
-      try {
-        return await this.prisma.project.create({
-          data: createProjectDto,
-        });
-      } catch (error) {
-        if (error.code === 'P2002' && error.meta?.target?.includes('project_key')) {
-          throw new ConflictException('Project key already exists');
-        }
-        throw error;
-      }
+      const exists = await this.projectRepository.findOne({ where: { project_key: createProjectDto.project_key } });
+      if (exists) throw new ConflictException('Project key already exists');
+      return await this.projectRepository.save(this.projectRepository.create(createProjectDto));
     }
   
     async findAll() {
-      return this.prisma.project.findMany();
+      return this.projectRepository.find();
     }
   
     async findOne(id: number) {
-      const project = await this.prisma.project.findUnique({
-        where: { id },
-      });
+      const project = await this.projectRepository.findOne({ where: { id } });
       
       if (!project) {
         throw new NotFoundException(`Project with ID ${id} not found`);
@@ -41,32 +37,22 @@ import {
     }
   
     async update(id: number, updateProjectDto: UpdateProjectDto) {
-      try {
-        return await this.prisma.project.update({
-          where: { id },
-          data: updateProjectDto,
-        });
-      } catch (error) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException(`Project with ID ${id} not found for update`);
-        }
-        if (error.code === 'P2002' && error.meta?.target?.includes('project_key')) {
-          throw new ConflictException('Cannot update. Project key already exists');
-        }
-        throw error;
+      const duplicate = updateProjectDto.project_key
+        ? await this.projectRepository.findOne({ where: { project_key: updateProjectDto.project_key } })
+        : null;
+      if (duplicate && duplicate.id !== id) {
+        throw new ConflictException('Cannot update. Project key already exists');
       }
+      await this.projectRepository.update({ id }, updateProjectDto);
+      const updated = await this.projectRepository.findOne({ where: { id } });
+      if (!updated) throw new NotFoundException(`Project with ID ${id} not found for update`);
+      return updated;
     }
   
     async remove(id: number) {
-      try {
-        return await this.prisma.project.delete({
-          where: { id },
-        });
-      } catch (error) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException(`Project with ID ${id} not found for deletion`);
-        }
-        throw error;
-      }
+      const existing = await this.projectRepository.findOne({ where: { id } });
+      if (!existing) throw new NotFoundException(`Project with ID ${id} not found for deletion`);
+      await this.projectRepository.delete({ id });
+      return existing;
     }
   }
