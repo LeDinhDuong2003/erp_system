@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Employee } from '../../database/entities/Employee.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(
+    @InjectRepository(Employee)
+    private readonly employeeRepository: Repository<Employee>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -13,7 +19,33 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    return { userId: payload.sub, username: payload.username };
+    const employee = await this.employeeRepository.findOne({
+      where: { id: payload.sub?.toString?.() ?? String(payload.sub) },
+      relations: [
+        'employee_role_assignments',
+        'employee_role_assignments.role',
+        'employee_role_assignments.role.role_permissions',
+        'employee_role_assignments.role.role_permissions.permission',
+      ],
+    });
+
+    if (!employee) {
+      return null;
+    }
+
+    return {
+      userId: employee.id.toString(),
+      username: employee.username,
+      email: employee.email,
+      employee_code: employee.employee_code,
+      full_name: employee.full_name,
+      roles: employee.employee_role_assignments.map((er) => ({
+        id: er.role.id.toString(),
+        code: er.role.code,
+        name: er.role.name,
+        description: er.role.description,
+      })),
+    };
   }
 }
 

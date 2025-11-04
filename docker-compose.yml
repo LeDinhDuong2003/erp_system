@@ -1,0 +1,50 @@
+services:
+  # -----------------------------------------------------------------
+  # POSTGRESQL DATABASE SERVICE
+  # -----------------------------------------------------------------
+  db:
+    image: postgres:latest
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: strong_password
+      POSTGRES_DB: database_name
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d database_name"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  # -----------------------------------------------------------------
+  # NODE.JS BACKEND SERVICE
+  # -----------------------------------------------------------------
+  backend:
+    image: node:22-slim
+    container_name: node_backend
+    restart: always 
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://username:strong_password@db:5432/database_name?schema=public
+    ports:
+      - "3000:3000" 
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    command: >
+      bash -c "apt-get update && 
+               apt-get install -y openssl libssl3 ca-certificates && 
+               npm install && 
+               npm run start:dev"
+
+  # (Optional) Add a migration runner for TypeORM later if needed
+
+volumes:
+  postgres_data:
