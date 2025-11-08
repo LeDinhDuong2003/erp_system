@@ -19,8 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    const employeeId = typeof payload.sub === 'string' ? parseInt(payload.sub, 10) : payload.sub;
     const employee = await this.employeeRepository.findOne({
-      where: { id: payload.sub?.toString?.() ?? String(payload.sub) },
+      where: { id: employeeId },
       relations: [
         'employee_role_assignments',
         'employee_role_assignments.role',
@@ -34,13 +35,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     return {
-      userId: employee.id.toString(),
+      id: employee.id,
+      userId: employee.id,
       username: employee.username,
       email: employee.email,
       employee_code: employee.employee_code,
       full_name: employee.full_name,
       roles: employee.employee_role_assignments.map((er) => ({
-        id: er.role.id.toString(),
+        id: er.role.id,
         code: er.role.code,
         name: er.role.name,
         description: er.role.description,

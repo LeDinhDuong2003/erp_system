@@ -30,6 +30,14 @@ async function bootstrap() {
     .addTag('roles', 'Role management')
     .addTag('permissions', 'Permission management')
     .addTag('projects', 'Project management')
+    .addTag('positions', 'Position management')
+    .addTag('departments', 'Department management')
+    .addTag('employee-positions', 'Employee position management')
+    .addTag('attendance', 'Attendance management')
+    .addTag('employee-salary', 'Employee salary management')
+    .addTag('leave-requests', 'Leave request management')
+    .addTag('files', 'File management')
+    .addTag('reports', 'Report management')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

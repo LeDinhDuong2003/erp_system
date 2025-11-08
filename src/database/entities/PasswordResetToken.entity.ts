@@ -3,11 +3,11 @@ import { Employee } from './Employee.entity';
 
 @Entity({ name: 'password_reset_tokens' })
 export class PasswordResetToken {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  @Column({ type: 'bigint' })
-  employee_id!: string;
+  @Column({ type: 'int' })
+  employee_id!: number;
 
   @Column({ type: 'text' })
   token_hash!: string;

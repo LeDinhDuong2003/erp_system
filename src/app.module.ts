@@ -6,6 +6,14 @@ import { ProjectModule } from './project/project.module';
 import { EmployeeModule } from './employee/employee.module';
 import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
+import { PositionModule } from './position/position.module';
+import { DepartmentModule } from './department/department.module';
+import { EmployeePositionModule } from './employee-position/employee-position.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { EmployeeSalaryModule } from './employee-salary/employee-salary.module';
+import { LeaveRequestModule } from './leave-request/leave-request.module';
+import { FileModule } from './file/file.module';
+import { ReportModule } from './report/report.module';
 import { SeedService } from './database/seed.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Employee } from './database/entities/Employee.entity';
@@ -17,6 +25,14 @@ import { RefreshToken } from './database/entities/RefreshToken.entity';
 import { PasswordResetToken } from './database/entities/PasswordResetToken.entity';
 import { AuditLog } from './database/entities/AuditLog.entity';
 import { Project } from './database/entities/Project.entity';
+import { Position } from './database/entities/Position.entity';
+import { Department } from './database/entities/Department.entity';
+import { EmployeePosition } from './database/entities/EmployeePosition.entity';
+import { Attendance } from './database/entities/Attendance.entity';
+import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
+import { LeaveRequest } from './database/entities/LeaveRequest.entity';
+import { File } from './database/entities/File.entity';
+import { Report } from './database/entities/Report.entity';
 
 @Module({
   imports: [
@@ -33,6 +49,14 @@ import { Project } from './database/entities/Project.entity';
         PasswordResetToken,
         AuditLog,
         Project,
+        Position,
+        Department,
+        EmployeePosition,
+        Attendance,
+        EmployeeSalary,
+        LeaveRequest,
+        File,
+        Report,
       ],
       synchronize: false,
       schema: 'public',
@@ -48,11 +72,27 @@ import { Project } from './database/entities/Project.entity';
       PasswordResetToken,
       AuditLog,
       Project,
+      Position,
+      Department,
+      EmployeePosition,
+      Attendance,
+      EmployeeSalary,
+      LeaveRequest,
+      File,
+      Report,
     ]),
     ProjectModule,
     EmployeeModule,
     RoleModule,
     PermissionModule,
+    PositionModule,
+    DepartmentModule,
+    EmployeePositionModule,
+    AttendanceModule,
+    EmployeeSalaryModule,
+    LeaveRequestModule,
+    FileModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

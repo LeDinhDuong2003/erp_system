@@ -41,7 +41,7 @@ export class PermissionController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.permissionService.findOne(id);
   }
 
@@ -49,7 +49,7 @@ export class PermissionController {
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updatePermissionDto: UpdatePermissionDto,
   ) {
     return this.permissionService.update(id, updatePermissionDto);
@@ -58,7 +58,7 @@ export class PermissionController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.permissionService.remove(id);
   }
 }

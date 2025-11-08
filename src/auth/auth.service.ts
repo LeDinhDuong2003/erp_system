@@ -86,7 +86,7 @@ export class AuthService {
     }
 
     return {
-      id: employee.id.toString(),
+      id: employee.id,
       username: employee.username,
       email: employee.email,
       employee_code: employee.employee_code,
@@ -108,12 +108,12 @@ export class AuthService {
   }
 
   private async generateTokens(user: {
-    id: string;
+    id: number;
     username: string;
     email: string;
   }) {
     const basePayload = {
-      sub: user.id,
+      sub: user.id.toString(),
       username: user.username,
       email: user.email,
     };
@@ -138,7 +138,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async login(user: { id: string; username: string; email: string }) {
+  async login(user: { id: number; username: string; email: string }) {
     const { accessToken, refreshToken } = await this.generateTokens(user);
     const refreshHash = await bcrypt.hash(refreshToken, 10);
     const expiresAt = new Date();
@@ -163,12 +163,12 @@ export class AuthService {
     };
   }
 
-  async refresh(user: { id: string; username: string; email: string }) {
+  async refresh(user: { id: number; username: string; email: string }) {
     return this.login(user);
   }
 
   async validateRefreshToken(userId: string, refreshToken: string) {
-    const employeeId = userId.toString();
+    const employeeId = parseInt(userId, 10);
 
     // Find all non-revoked, non-expired refresh tokens for this user
     const tokens = await this.refreshTokenRepository.find({
@@ -194,7 +194,7 @@ export class AuthService {
         }
 
         return {
-          id: employee.id.toString(),
+          id: employee.id,
           username: employee.username,
           email: employee.email,
         };
@@ -205,7 +205,7 @@ export class AuthService {
   }
 
   async revoke(userId: string) {
-    const employeeId = userId.toString();
+    const employeeId = parseInt(userId, 10);
     await this.refreshTokenRepository
       .createQueryBuilder()
       .update(RefreshToken)
@@ -215,7 +215,7 @@ export class AuthService {
   }
 
   async revokeSpecificToken(userId: string, refreshToken: string) {
-    const employeeId = userId.toString();
+    const employeeId = parseInt(userId, 10);
 
     const tokens = await this.refreshTokenRepository.find({
       where: { employee_id: employeeId, revoked: false },

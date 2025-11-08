@@ -4,11 +4,11 @@ import { Permission } from './Permission.entity';
 
 @Entity({ name: 'role_permissions' })
 export class RolePermission {
-  @PrimaryColumn({ type: 'bigint' })
-  role_id!: string;
+  @PrimaryColumn({ type: 'int' })
+  role_id!: number;
 
-  @PrimaryColumn({ type: 'bigint' })
-  permission_id!: string;
+  @PrimaryColumn({ type: 'int' })
+  permission_id!: number;
 
   @ManyToOne(() => Role, (role) => role.role_permissions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'role_id' })

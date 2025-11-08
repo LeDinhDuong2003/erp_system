@@ -3,11 +3,11 @@ import { Employee } from './Employee.entity';
 
 @Entity({ name: 'refresh_tokens' })
 export class RefreshToken {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  @Column({ type: 'bigint' })
-  employee_id!: string;
+  @Column({ type: 'int' })
+  employee_id!: number;
 
   @Column({ type: 'text' })
   token_hash!: string;

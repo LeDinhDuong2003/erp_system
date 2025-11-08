@@ -3,6 +3,12 @@ import { EmployeeRoleAssignment } from './EmployeeRoleAssignment.entity';
 import { PasswordResetToken } from './PasswordResetToken.entity';
 import { RefreshToken } from './RefreshToken.entity';
 import { AuditLog } from './AuditLog.entity';
+import { EmployeePosition } from './EmployeePosition.entity';
+import { Attendance } from './Attendance.entity';
+import { EmployeeSalary } from './EmployeeSalary.entity';
+import { LeaveRequest } from './LeaveRequest.entity';
+import { File } from './File.entity';
+import { Report } from './Report.entity';
 
 export enum Gender {
   MALE = 'MALE',
@@ -26,8 +32,8 @@ export enum EmployeeStatus {
 
 @Entity({ name: 'employee' })
 export class Employee {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
   @Column({ type: 'varchar', length: 100 })
   employee_code!: string;
@@ -112,6 +118,21 @@ export class Employee {
 
   @OneToMany(() => AuditLog, (al) => al.employee)
   audit_logs!: AuditLog[];
+
+  @OneToMany(() => EmployeePosition, (ep) => ep.employee)
+  employee_positions!: EmployeePosition[];
+
+  @OneToMany(() => Attendance, (att) => att.employee)
+  attendances!: Attendance[];
+
+  @OneToMany(() => EmployeeSalary, (es) => es.employee)
+  salaries!: EmployeeSalary[];
+
+  @OneToMany(() => LeaveRequest, (lr) => lr.employee)
+  leave_requests!: LeaveRequest[];
+
+  @OneToMany(() => File, (f) => f.employee)
+  files!: File[];
 }
 
 
