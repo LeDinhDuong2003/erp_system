@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ProjectModule } from './project/project.module';
+import { ProjectModule } from './project-module/project/project.module';
+import { IssueModule } from './project-module/issue-module/issue/issue.module';
+import { IssueCommentModule } from './project-module/issue-module/comment/issue-comment.module';
 import { EmployeeModule } from './employee/employee.module';
 import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
@@ -16,7 +18,8 @@ import { RolePermission } from './database/entities/RolePermission.entity';
 import { RefreshToken } from './database/entities/RefreshToken.entity';
 import { PasswordResetToken } from './database/entities/PasswordResetToken.entity';
 import { AuditLog } from './database/entities/AuditLog.entity';
-import { Project } from './database/entities/Project.entity';
+import { Project } from './database/entities/project-module/Project.entity';
+import { Issue, IssueComment } from './database/entities/project-module/Issue.entity';
 
 @Module({
   imports: [
@@ -33,6 +36,8 @@ import { Project } from './database/entities/Project.entity';
         PasswordResetToken,
         AuditLog,
         Project,
+        Issue,
+        IssueComment,
       ],
       synchronize: false,
       schema: 'public',
@@ -48,8 +53,12 @@ import { Project } from './database/entities/Project.entity';
       PasswordResetToken,
       AuditLog,
       Project,
+      Issue,
+      IssueComment,
     ]),
     ProjectModule,
+    IssueModule,
+    IssueCommentModule,
     EmployeeModule,
     RoleModule,
     PermissionModule,

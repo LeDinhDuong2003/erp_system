@@ -1,8 +1,11 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { EmployeeRoleAssignment } from './EmployeeRoleAssignment.entity';
 import { PasswordResetToken } from './PasswordResetToken.entity';
 import { RefreshToken } from './RefreshToken.entity';
 import { AuditLog } from './AuditLog.entity';
+import { ProjectRoleAssignment } from './project-module/Permission.entity';
+import { Project } from './project-module/Project.entity';
+import { Issue, IssueChangeHistory, IssueComment } from './project-module/Issue.entity';
 
 export enum Gender {
   MALE = 'MALE',
@@ -27,7 +30,7 @@ export enum EmployeeStatus {
 @Entity({ name: 'employee' })
 export class Employee {
   @PrimaryGeneratedColumn({ type: 'bigint' })
-  id!: string;
+  id!: number;
 
   @Column({ type: 'varchar', length: 100 })
   employee_code!: string;
@@ -112,6 +115,30 @@ export class Employee {
 
   @OneToMany(() => AuditLog, (al) => al.employee)
   audit_logs!: AuditLog[];
+
+  // @OneToMany(() => ProjectRoleAssignment, (pra) => pra.employee)
+  project_role_assignments!: ProjectRoleAssignment[];
+
+  // @OneToMany(() => ProjectRoleAssignment, (pra) => pra.assigned_by_employee)
+  assigned_roles!: ProjectRoleAssignment[];
+
+  @OneToMany(() => Project, (project) => project.lead_employee)
+  led_projects!: Project[];
+
+  @OneToMany(() => Issue, (issue) => issue.reporter)
+  reported_issues!: Issue[];
+
+  // @OneToMany(() => IssueComment, (comment) => comment.employee)
+  issue_comments!: IssueComment[];
+
+  // @OneToMany(() => IssueChangeHistory, (history) => history.changer_employee)
+  issue_changes!: IssueChangeHistory[];
+
+  @ManyToMany(() => Issue, (issue) => issue.assignees)
+  assigned_issues!: Issue[];
+
+  @ManyToMany(() => Issue, (issue) => issue.watchers)
+  watched_issues!: Issue[];
 }
 
 
