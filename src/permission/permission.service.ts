@@ -64,9 +64,9 @@ export class PermissionService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const permission = await this.permissionRepository.findOne({
-      where: { id: id.toString() },
+      where: { id },
       relations: ['role_permissions', 'role_permissions.role'],
     });
 
@@ -77,8 +77,8 @@ export class PermissionService {
     return this.transformPermission(permission);
   }
 
-  async update(id: string, updatePermissionDto: UpdatePermissionDto) {
-    const permission = await this.permissionRepository.findOne({ where: { id: id.toString() } });
+  async update(id: number, updatePermissionDto: UpdatePermissionDto) {
+    const permission = await this.permissionRepository.findOne({ where: { id } });
 
     if (!permission) {
       throw new NotFoundException(`Permission with ID ${id} not found`);
@@ -94,23 +94,23 @@ export class PermissionService {
       }
     }
 
-    await this.permissionRepository.update({ id: id.toString() }, updatePermissionDto);
+    await this.permissionRepository.update({ id }, updatePermissionDto);
     const updated = await this.permissionRepository.findOne({
-      where: { id: id.toString() },
+      where: { id },
       relations: ['role_permissions', 'role_permissions.role'],
     });
 
     return this.transformPermission(updated!);
   }
 
-  async remove(id: string) {
-    const permission = await this.permissionRepository.findOne({ where: { id: id.toString() } });
+  async remove(id: number) {
+    const permission = await this.permissionRepository.findOne({ where: { id } });
 
     if (!permission) {
       throw new NotFoundException(`Permission with ID ${id} not found`);
     }
 
-    await this.permissionRepository.delete({ id: id.toString() });
+    await this.permissionRepository.delete({ id });
 
     return { message: 'Permission deleted successfully' };
   }
@@ -118,9 +118,8 @@ export class PermissionService {
   private transformPermission(permission: any) {
     return {
       ...permission,
-      id: permission.id.toString(),
       roles: permission.role_permissions?.map((rp: any) => ({
-        id: rp.role.id.toString(),
+        id: rp.role.id,
         code: rp.role.code,
         name: rp.role.name,
       })),

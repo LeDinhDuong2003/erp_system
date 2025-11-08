@@ -3,11 +3,11 @@ import { Employee } from './Employee.entity';
 
 @Entity({ name: 'audit_logs' })
 export class AuditLog {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-  @Column({ type: 'bigint', nullable: true })
-  employee_id!: string | null;
+  @Column({ type: 'int', nullable: true })
+  employee_id!: number | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   action!: string | null;
