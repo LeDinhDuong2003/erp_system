@@ -4,11 +4,11 @@ import { Role } from './Role.entity';
 
 @Entity({ name: 'employee_roles' })
 export class EmployeeRoleAssignment {
-  @PrimaryColumn({ type: 'bigint' })
-  employee_id!: string;
+  @PrimaryColumn({ type: 'int' })
+  employee_id!: number;
 
-  @PrimaryColumn({ type: 'bigint' })
-  role_id!: string;
+  @PrimaryColumn({ type: 'int' })
+  role_id!: number;
 
   @ManyToOne(() => Employee, (employee) => employee.employee_role_assignments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'employee_id' })

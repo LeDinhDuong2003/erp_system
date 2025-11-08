@@ -51,6 +51,14 @@ import {
   ProjectPermission,
   ProjectRoleAssignment,
 } from './src/database/entities/project-module/Permission.entity';
+import { Position } from './src/database/entities/Position.entity';
+import { Department } from './src/database/entities/Department.entity';
+import { EmployeePosition } from './src/database/entities/EmployeePosition.entity';
+import { Attendance } from './src/database/entities/Attendance.entity';
+import { EmployeeSalary } from './src/database/entities/EmployeeSalary.entity';
+import { LeaveRequest } from './src/database/entities/LeaveRequest.entity';
+import { File } from './src/database/entities/File.entity';
+import { Report } from './src/database/entities/Report.entity';
 
 export default new DataSource({
   type: 'postgres',
@@ -96,6 +104,14 @@ export default new DataSource({
     ProjectRole,
     ProjectPermission,
     ProjectRoleAssignment,
+    Position,
+    Department,
+    EmployeePosition,
+    Attendance,
+    EmployeeSalary,
+    LeaveRequest,
+    File,
+    Report,
   ],
   migrations: ['src/migration/**/*.ts'],
   synchronize: false,

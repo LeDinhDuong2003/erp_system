@@ -6,6 +6,12 @@ import { AuditLog } from './AuditLog.entity';
 import { ProjectRoleAssignment } from './project-module/Permission.entity';
 import { Project } from './project-module/Project.entity';
 import { Issue, IssueChangeHistory, IssueComment } from './project-module/Issue.entity';
+import { EmployeePosition } from './EmployeePosition.entity';
+import { Attendance } from './Attendance.entity';
+import { EmployeeSalary } from './EmployeeSalary.entity';
+import { LeaveRequest } from './LeaveRequest.entity';
+import { File } from './File.entity';
+import { Report } from './Report.entity';
 
 export enum Gender {
   MALE = 'MALE',
@@ -29,7 +35,7 @@ export enum EmployeeStatus {
 
 @Entity({ name: 'employee' })
 export class Employee {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
+  @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({ type: 'varchar', length: 100 })
@@ -139,6 +145,21 @@ export class Employee {
 
   @ManyToMany(() => Issue, (issue) => issue.watchers)
   watched_issues!: Issue[];
+
+  @OneToMany(() => EmployeePosition, (ep) => ep.employee)
+  employee_positions!: EmployeePosition[];
+
+  @OneToMany(() => Attendance, (att) => att.employee)
+  attendances!: Attendance[];
+
+  @OneToMany(() => EmployeeSalary, (es) => es.employee)
+  salaries!: EmployeeSalary[];
+
+  @OneToMany(() => LeaveRequest, (lr) => lr.employee)
+  leave_requests!: LeaveRequest[];
+
+  @OneToMany(() => File, (f) => f.employee)
+  files!: File[];
 }
 
 

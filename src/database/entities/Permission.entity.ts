@@ -3,8 +3,8 @@ import { RolePermission } from './RolePermission.entity';
 
 @Entity({ name: 'permissions' })
 export class Permission {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
   @Column({ type: 'varchar', length: 150, unique: true })
   code!: string;

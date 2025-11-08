@@ -42,21 +42,21 @@ export class RoleController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.roleService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
-  update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateRoleDto: UpdateRoleDto) {
     return this.roleService.update(id, updateRoleDto);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.roleService.remove(id);
   }
 
@@ -64,7 +64,7 @@ export class RoleController {
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
   assignPermissions(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() assignPermissionsDto: AssignPermissionsDto,
   ) {
     return this.roleService.assignPermissions(id, assignPermissionsDto);
@@ -74,8 +74,8 @@ export class RoleController {
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
   removePermissions(
-    @Param('id') id: string,
-    @Body() body: { permission_ids: string[] },
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { permission_ids: number[] },
   ) {
     return this.roleService.removePermissions(id, body.permission_ids);
   }

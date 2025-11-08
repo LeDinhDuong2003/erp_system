@@ -95,9 +95,9 @@ export class EmployeeService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const employee = await this.employeeRepository.findOne({
-      where: { id: id.toString() },
+      where: { id },
       relations: [
         'employee_role_assignments',
         'employee_role_assignments.role',
@@ -113,8 +113,8 @@ export class EmployeeService {
     return this.transformEmployee(employee);
   }
 
-  async update(id: string, updateEmployeeDto: UpdateEmployeeDto) {
-    const employee = await this.employeeRepository.findOne({ where: { id: id.toString() } });
+  async update(id: number, updateEmployeeDto: UpdateEmployeeDto) {
+    const employee = await this.employeeRepository.findOne({ where: { id } });
 
     if (!employee) {
       throw new NotFoundException(`Employee with ID ${id} not found`);
@@ -155,50 +155,49 @@ export class EmployeeService {
       delete data.password;
     }
 
-    await this.employeeRepository.update({ id: id.toString() }, data);
+    await this.employeeRepository.update({ id }, data);
     const updated = await this.employeeRepository.findOne({
-      where: { id: id.toString() },
+      where: { id },
       relations: ['employee_role_assignments', 'employee_role_assignments.role'],
     });
 
     return this.transformEmployee(updated!);
   }
 
-  async remove(id: string) {
-    const employee = await this.employeeRepository.findOne({ where: { id: id.toString() } });
+  async remove(id: number) {
+    const employee = await this.employeeRepository.findOne({ where: { id } });
 
     if (!employee) {
       throw new NotFoundException(`Employee with ID ${id} not found`);
     }
 
-    await this.employeeRepository.delete({ id: id.toString() });
+    await this.employeeRepository.delete({ id });
 
     return { message: 'Employee deleted successfully' };
   }
 
-  async assignRoles(id: string, assignRolesDto: AssignRolesDto) {
-    const employee = await this.employeeRepository.findOne({ where: { id: id.toString() } });
+  async assignRoles(id: number, assignRolesDto: AssignRolesDto) {
+    const employee = await this.employeeRepository.findOne({ where: { id } });
 
     if (!employee) {
       throw new NotFoundException(`Employee with ID ${id} not found`);
     }
 
     // Verify all roles exist
-    const roleIds = assignRolesDto.role_ids.map((rid) => rid.toString());
-    const roles = await this.roleRepository.find({ where: roleIds.map((id) => ({ id })) as any });
+    const roles = await this.roleRepository.find({ where: assignRolesDto.role_ids.map((id) => ({ id })) as any });
 
-    if (roles.length !== roleIds.length) {
+    if (roles.length !== assignRolesDto.role_ids.length) {
       throw new BadRequestException('One or more roles not found');
     }
 
     // Remove existing role assignments
-    await this.employeeRoleAssignmentRepository.delete({ employee_id: id.toString() } as any);
+    await this.employeeRoleAssignmentRepository.delete({ employee_id: id } as any);
 
     // Create new role assignments
     await this.employeeRoleAssignmentRepository.save(
-      roleIds.map((roleId) =>
+      assignRolesDto.role_ids.map((roleId) =>
         this.employeeRoleAssignmentRepository.create({
-          employee_id: id.toString(),
+          employee_id: id,
           role_id: roleId,
         }),
       ),
@@ -207,8 +206,8 @@ export class EmployeeService {
     return this.findOne(id);
   }
 
-  async removeRoles(id: string, roleIds: string[]) {
-    const employee = await this.employeeRepository.findOne({ where: { id: id.toString() } });
+  async removeRoles(id: number, roleIds: number[]) {
+    const employee = await this.employeeRepository.findOne({ where: { id } });
 
     if (!employee) {
       throw new NotFoundException(`Employee with ID ${id} not found`);
@@ -219,7 +218,7 @@ export class EmployeeService {
       .delete()
       .from(EmployeeRoleAssignment)
       .where('employee_id = :employeeId AND role_id IN (:...roleIds)', {
-        employeeId: id.toString(),
+        employeeId: id,
         roleIds: roleIds,
       })
       .execute();
@@ -230,9 +229,8 @@ export class EmployeeService {
   private transformEmployee(employee: any) {
     return {
       ...employee,
-      id: employee.id.toString(),
       roles: employee.employee_role_assignments?.map((er: any) => ({
-        id: er.role.id.toString(),
+        id: er.role.id,
         code: er.role.code,
         name: er.role.name,
         description: er.role.description,

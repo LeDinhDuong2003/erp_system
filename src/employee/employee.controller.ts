@@ -42,24 +42,24 @@ export class EmployeeController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.employeeService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEmployeeDto: UpdateEmployeeDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateEmployeeDto: UpdateEmployeeDto) {
     return this.employeeService.update(id, updateEmployeeDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.employeeService.remove(id);
   }
 
   @Post(':id/roles')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
-  assignRoles(@Param('id') id: string, @Body() assignRolesDto: AssignRolesDto) {
+  assignRoles(@Param('id', ParseIntPipe) id: number, @Body() assignRolesDto: AssignRolesDto) {
     return this.employeeService.assignRoles(id, assignRolesDto);
   }
 
@@ -67,8 +67,8 @@ export class EmployeeController {
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN')
   removeRoles(
-    @Param('id') id: string,
-    @Body() body: { role_ids: string[] },
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { role_ids: number[] },
   ) {
     return this.employeeService.removeRoles(id, body.role_ids);
   }
