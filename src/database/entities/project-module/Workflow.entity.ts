@@ -59,6 +59,9 @@ export class WorkflowStatus {
   @Column()
   workflow_id!: number;
 
+  @Column({ type: 'integer', default: 0 })
+  order_index!: number;
+
   @Column()
   status_name!: string;
 
@@ -89,16 +92,16 @@ export class WorkflowSchemeMapping {
   @Column()
   workflow_id!: number;
 
-  @ManyToOne(() => WorkflowScheme, (scheme) => scheme.mappings)
-  @JoinColumn({ name: 'workflow_scheme_id' })
+  // @ManyToOne(() => WorkflowScheme, (scheme) => scheme.mappings)
+  // @JoinColumn({ name: 'workflow_scheme_id' })
   workflow_scheme!: WorkflowScheme;
 
   @ManyToOne(() => IssueType, (type) => type.workflow_mappings)
   @JoinColumn({ name: 'issue_type_id' })
   issue_type!: IssueType;
 
-  @ManyToOne(() => Workflow, (workflow) => workflow.workflow_mappings)
-  @JoinColumn({ name: 'workflow_id' })
+  // @ManyToOne(() => Workflow, (workflow) => workflow.workflow_mappings)
+  // @JoinColumn({ name: 'workflow_id' })
   workflow!: Workflow;
 }
 

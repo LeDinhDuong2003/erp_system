@@ -27,7 +27,7 @@ import { RefreshToken } from './database/entities/RefreshToken.entity';
 import { PasswordResetToken } from './database/entities/PasswordResetToken.entity';
 import { AuditLog } from './database/entities/AuditLog.entity';
 import { Project } from './database/entities/project-module/Project.entity';
-import { Issue, IssueComment } from './database/entities/project-module/Issue.entity';
+import { Epic, Issue, IssueComment, IssueLink, IssueType } from './database/entities/project-module/Issue.entity';
 import { Position } from './database/entities/Position.entity';
 import { Department } from './database/entities/Department.entity';
 import { EmployeePosition } from './database/entities/EmployeePosition.entity';
@@ -36,6 +36,14 @@ import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
 import { LeaveRequest } from './database/entities/LeaveRequest.entity';
 import { File } from './database/entities/File.entity';
 import { Report } from './database/entities/Report.entity';
+import { WorkflowSeederService } from './database/seeders/project-module/workflow.seeder';
+import {
+  Workflow,
+  WorkflowScheme,
+  WorkflowStatus,
+  WorkflowSchemeMapping,
+} from './database/entities/project-module/Workflow.entity';
+import { EpicModule } from './project-module/epic/epic.module';
 
 @Module({
   imports: [
@@ -53,6 +61,13 @@ import { Report } from './database/entities/Report.entity';
         AuditLog,
         Project,
         Issue,
+        IssueLink,
+        IssueType,
+        Workflow,
+        WorkflowScheme,
+        WorkflowStatus,
+        WorkflowSchemeMapping,
+        Epic,
         IssueComment,
         Position,
         Department,
@@ -78,6 +93,13 @@ import { Report } from './database/entities/Report.entity';
       AuditLog,
       Project,
       Issue,
+      IssueLink,
+      IssueType,
+      Workflow,
+      WorkflowScheme,
+      WorkflowStatus,
+      WorkflowSchemeMapping,
+      Epic,
       IssueComment,
       Position,
       Department,
@@ -89,6 +111,7 @@ import { Report } from './database/entities/Report.entity';
       Report,
     ]),
     ProjectModule,
+    EpicModule,
     IssueModule,
     IssueCommentModule,
     EmployeeModule,
@@ -104,6 +127,6 @@ import { Report } from './database/entities/Report.entity';
     ReportModule,
   ],
   controllers: [AppController],
-  providers: [AppService, SeedService],
+  providers: [AppService, SeedService, WorkflowSeederService],
 })
 export class AppModule {}
