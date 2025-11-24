@@ -8,12 +8,15 @@ import {
     Delete,
     Query,
     ParseIntPipe,
+    UseGuards,
 } from '@nestjs/common';
 import { EpicService } from './epic.service';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('epics')
+@UseGuards(JwtAuthGuard)
 export class EpicController {
     constructor(private readonly epicService: EpicService) {}
 

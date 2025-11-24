@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Issue } from '../../../database/entities/project-module/Issue.entity';
 import { WorkflowStatus } from 'src/database/entities/project-module/Workflow.entity';
 import { MoveCardDto, ReorderCardsDto, ReorderColumnsDto } from './dto/board-operations.dto';
+import { IssueHistoryService } from './issue-history.service';
 
 // Định nghĩa kiểu dữ liệu cho kết quả trả về
 interface IssuesByStatus {
@@ -24,6 +25,8 @@ export class IssueBoardService {
     private readonly workflowStatusRepository: Repository<WorkflowStatus>,
 
     private readonly dataSource: DataSource,
+    
+    private readonly historyService: IssueHistoryService,
   ) {}
 
   
@@ -176,7 +179,7 @@ async reorderCards(statusId: number, dto: ReorderCardsDto) {
  * API 3: Move Card to Different Column
  * Di chuyển issue sang status mới và cập nhật order_index
  */
-async moveCard(issueId: number, dto: MoveCardDto) {
+async moveCard(issueId: number, dto: MoveCardDto, userId: number) {
     const { targetStatusId, targetIndex } = dto;
 
     // Verify issue exists
@@ -198,6 +201,9 @@ async moveCard(issueId: number, dto: MoveCardDto) {
     }
 
     const oldStatusId = issue.current_status_id;
+    const oldStatus = await this.workflowStatusRepository.findOne({
+        where: { id: oldStatusId },
+    });
 
     await this.dataSource.transaction(async (manager) => {
         // 1. Nếu di chuyển sang status khác
@@ -253,6 +259,15 @@ async moveCard(issueId: number, dto: MoveCardDto) {
                     );
                 }
             }
+
+            // Ghi lại lịch sử thay đổi status
+            await this.historyService.logChange(
+                issueId,
+                userId,
+                'current_status_id',
+                `${oldStatus?.status_name} (ID: ${oldStatusId})`,
+                `${targetStatus.status_name} (ID: ${targetStatusId})`,
+            );
         } else {
             // Nếu di chuyển trong cùng status, chỉ cần reorder
             const issuesInStatus = await manager.find(Issue, {
@@ -289,18 +304,32 @@ async moveCard(issueId: number, dto: MoveCardDto) {
 }
 }
 
+// Định nghĩa cấu trúc cho mỗi Assignee trong BoardItem
+interface BoardAssignee {
+  id: number;
+  full_name: string;
+  email?: string;
+}
+
 // Định nghĩa cấu trúc cho mỗi Item (Issue) trên Board
 interface BoardItem {
   id: number; // ID nội bộ của Issue
   issueId: string; // Ví dụ: "ERP1", dựa trên issue_code
-  name: string; // Tên người được Assign (Assignee)
+  name: string; // Tên người được Assign (Assignee) - giữ lại để tương thích
   summary: string;
-  epic_name: string | null; // Tên Epic (Cần phải load thêm relation)
-  issue_type: string;
+  epic_name: string | null; // Tên Epic
+  issue_type: string; // Tên loại issue
   priority: string; // Chưa có trong dữ liệu hiện tại, có thể để giá trị mặc định
   points: number | null; // story_points
   role: string; // Role của Assignee (Cần phải load thêm relation)
   avatarUrl: string; // Ảnh Assignee (Cần phải load thêm relation)
+  
+  // ===== CÁC TRƯỜNG MỚI CHO FILTER =====
+  issue_type_id: number; // ID loại issue - để filter theo issue type
+  epic_link_id: number | null; // ID epic - để filter theo epic
+  assignees: BoardAssignee[]; // Danh sách assignees đầy đủ - để filter theo assignee
+  project_id: number; // ID project
+  current_status_id: number; // ID status hiện tại
 }
 
 // Định nghĩa cấu trúc cho mỗi Column
@@ -334,23 +363,38 @@ function transformIssuesToBoardFormat(issuesByStatus: IssuesByStatus[]): BoardDa
       // Lấy Assignee đầu tiên (nếu có), nếu không có thì để trống
       const assignee = issue.assignees && issue.assignees.length > 0 ? issue.assignees[0] : null;
       
+      // Transform assignees thành format đơn giản cho frontend
+      const assigneesForFilter: BoardAssignee[] = (issue.assignees || []).map(a => ({
+        id: a.id,
+        full_name: `${a.first_name || ''} ${a.last_name || ''}`.trim(),
+        email: a.email,
+      }));
+      
       return {
         id: issue.id,
         issueId: issue.issue_code.toUpperCase(), // Sử dụng issue_code
-        name: assignee ? `${assignee.first_name} ${assignee.last_name}` : '', // Cần field first_name/last_name trong Assignee Entity
+        name: assignee ? `${assignee.first_name} ${assignee.last_name}` : '', // Giữ lại để tương thích
         summary: issue.summary,
         
-        // Cần phải load thêm quan hệ 'epic_link' (đã bị comment out trong Issue.entity) 
-        // và 'reporter' (có sẵn) để lấy tên Epic và Reporter.
-        epic_name: issue?.epic_link?.epic_name ?? '', // Tạm để trống
+        // Tên Epic
+        epic_name: issue?.epic_link?.epic_name ?? '',
         
-        issue_type: issue.issue_type.type_name,
+        // Tên loại issue
+        issue_type: issue.issue_type?.type_name || '',
+        
         priority: 'medium', // Tạm để mặc định, vì chưa có trường priority
         points: issue.story_points,
         
         // Role và Avatar cần load thêm quan hệ EmployeeRoleAssignment hoặc Employee.position
         role: '', 
         avatarUrl: '',
+        
+        // ===== CÁC TRƯỜNG MỚI CHO FILTER =====
+        issue_type_id: issue.issue_type_id, // ID loại issue
+        epic_link_id: issue.epic_link_id, // ID epic (có thể null)
+        assignees: assigneesForFilter, // Danh sách assignees đầy đủ
+        project_id: issue.project_id, // ID project
+        current_status_id: issue.current_status_id, // ID status hiện tại
       };
     });
 
@@ -368,5 +412,4 @@ function transformIssuesToBoardFormat(issuesByStatus: IssuesByStatus[]): BoardDa
     columnMap,
     orderedColumnIds,
   };
-
 }

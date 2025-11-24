@@ -27,7 +27,7 @@ import { RefreshToken } from './database/entities/RefreshToken.entity';
 import { PasswordResetToken } from './database/entities/PasswordResetToken.entity';
 import { AuditLog } from './database/entities/AuditLog.entity';
 import { Project } from './database/entities/project-module/Project.entity';
-import { Epic, Issue, IssueComment, IssueLink, IssueType } from './database/entities/project-module/Issue.entity';
+import { Epic, Issue, IssueChangeHistory, IssueComment, IssueLink, IssueType } from './database/entities/project-module/Issue.entity';
 import { Position } from './database/entities/Position.entity';
 import { Department } from './database/entities/Department.entity';
 import { EmployeePosition } from './database/entities/EmployeePosition.entity';
@@ -44,6 +44,8 @@ import {
   WorkflowSchemeMapping,
 } from './database/entities/project-module/Workflow.entity';
 import { EpicModule } from './project-module/epic/epic.module';
+import { SprintModule } from './project-module/sprint/sprint.module';
+import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.entity';
 
 @Module({
   imports: [
@@ -63,6 +65,9 @@ import { EpicModule } from './project-module/epic/epic.module';
         Issue,
         IssueLink,
         IssueType,
+        Sprint,
+        SprintIssue,
+        IssueChangeHistory,
         Workflow,
         WorkflowScheme,
         WorkflowStatus,
@@ -95,6 +100,9 @@ import { EpicModule } from './project-module/epic/epic.module';
       Issue,
       IssueLink,
       IssueType,
+      Sprint,
+      SprintIssue,
+      IssueChangeHistory,
       Workflow,
       WorkflowScheme,
       WorkflowStatus,
@@ -113,6 +121,7 @@ import { EpicModule } from './project-module/epic/epic.module';
     ProjectModule,
     EpicModule,
     IssueModule,
+    SprintModule,
     IssueCommentModule,
     EmployeeModule,
     RoleModule,
