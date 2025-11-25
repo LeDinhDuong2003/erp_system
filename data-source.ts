@@ -1,3 +1,4 @@
+// data-source.ts
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
 
@@ -60,7 +61,7 @@ import { LeaveRequest } from './src/database/entities/LeaveRequest.entity';
 import { File } from './src/database/entities/File.entity';
 import { Report } from './src/database/entities/Report.entity';
 
-export default new DataSource({
+export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   entities: [

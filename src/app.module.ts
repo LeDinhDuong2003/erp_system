@@ -36,6 +36,18 @@ import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
 import { LeaveRequest } from './database/entities/LeaveRequest.entity';
 import { File } from './database/entities/File.entity';
 import { Report } from './database/entities/Report.entity';
+import { AssetManagementModule } from './asset-management/asset-management.module';
+import { Asset } from './database/assetmanagement/asset.entity';
+import { Category } from './database/assetmanagement/category.entity';
+
+// THÊM DÒNG NÀY – ĐÚNG ĐƯỜNG DẪN TỚI FILE MODULE BẠN VỪA TẠO
+import { AssetHandoverModule } from './asset-handover/assethandover.module'
+import { AssetRequestModule } from './asset-request/asset-request.module';
+// Nếu bạn còn entity Assignment thì thêm vào đây luôn cho chắc
+import { Assignment } from './database/assethandover/assignment.entity';
+import { Request } from './database/assetrequest/request.entity';
+import { Notification } from './database/assetrequest/notification.entity';
+import { Supplier } from './database/assetrequest/supplier.entity';
 import { WorkflowSeederService } from './database/seeders/project-module/workflow.seeder';
 import {
   Workflow,
@@ -82,10 +94,17 @@ import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.e
         LeaveRequest,
         File,
         Report,
+        Asset,
+        Category,
+        Assignment,
+        Request,
+        Notification,
+        Supplier, // THÊM DÒNG NÀY NẾU CHƯA CÓ
       ],
       synchronize: false,
       schema: 'public',
     }),
+    AssetManagementModule,
     AuthModule,
     TypeOrmModule.forFeature([
       Employee,
@@ -117,6 +136,9 @@ import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.e
       LeaveRequest,
       File,
       Report,
+      Asset,
+      Category,
+      Assignment, // THÊM NẾU CHƯA CÓ
     ]),
     ProjectModule,
     EpicModule,
@@ -134,6 +156,10 @@ import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.e
     LeaveRequestModule,
     FileModule,
     ReportModule,
+
+    // DÒNG QUAN TRỌNG NHẤT – THÊM VÀO ĐÂY
+    AssetHandoverModule,
+    AssetRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService, WorkflowSeederService],
