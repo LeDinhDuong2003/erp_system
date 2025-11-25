@@ -33,6 +33,18 @@ import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
 import { LeaveRequest } from './database/entities/LeaveRequest.entity';
 import { File } from './database/entities/File.entity';
 import { Report } from './database/entities/Report.entity';
+import { AssetManagementModule } from './asset-management/asset-management.module';
+import { Asset } from './database/assetmanagement/asset.entity';
+import { Category } from './database/assetmanagement/category.entity';
+
+// THÊM DÒNG NÀY – ĐÚNG ĐƯỜNG DẪN TỚI FILE MODULE BẠN VỪA TẠO
+import { AssetHandoverModule } from './asset-handover/assethandover.module'
+import { AssetRequestModule } from './asset-request/asset-request.module';
+// Nếu bạn còn entity Assignment thì thêm vào đây luôn cho chắc
+import { Assignment } from './database/assethandover/assignment.entity';
+import { Request } from './database/assetrequest/request.entity';
+import { Notification } from './database/assetrequest/notification.entity';
+import { Supplier } from './database/assetrequest/supplier.entity';
 
 @Module({
   imports: [
@@ -57,10 +69,17 @@ import { Report } from './database/entities/Report.entity';
         LeaveRequest,
         File,
         Report,
+        Asset,
+        Category,
+        Assignment,
+        Request,
+        Notification,
+        Supplier, // THÊM DÒNG NÀY NẾU CHƯA CÓ
       ],
       synchronize: false,
       schema: 'public',
     }),
+    AssetManagementModule,
     AuthModule,
     TypeOrmModule.forFeature([
       Employee,
@@ -80,6 +99,9 @@ import { Report } from './database/entities/Report.entity';
       LeaveRequest,
       File,
       Report,
+      Asset,
+      Category,
+      Assignment, // THÊM NẾU CHƯA CÓ
     ]),
     ProjectModule,
     EmployeeModule,
@@ -93,6 +115,10 @@ import { Report } from './database/entities/Report.entity';
     LeaveRequestModule,
     FileModule,
     ReportModule,
+
+    // DÒNG QUAN TRỌNG NHẤT – THÊM VÀO ĐÂY
+    AssetHandoverModule,
+    AssetRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

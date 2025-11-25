@@ -133,6 +133,18 @@ export class Employee {
 
   @OneToMany(() => File, (f) => f.employee)
   files!: File[];
+
+  @Column({ type: 'text', nullable: true })
+  qr_code_url!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  face_image_url!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  face_embedding!: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  face_registered_at!: Date | null;
 }
 
 
