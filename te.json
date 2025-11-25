@@ -1,0 +1,63 @@
+{
+    "columnMap": {
+        "to_do": {
+            "title": "To Do",
+            "columnId": "to_do",
+            "items": [
+                {
+                    "issueId": "ERP1",
+                    "name": "Aliza",
+                    "summary": "Cập nhật giao diện người dùng trang đăng nhập",
+                    "epic_name": "EPIC-UX-Improvements",
+                    "issue_type": "feature",
+                    "priority": "high",
+                    "points": 2,
+                    "role": "Senior Engineer",
+                    "avatarUrl": ""
+                },
+                {
+                    "issueId": "ERP2",
+                    "name": "Alvin",
+                    "summary": "Sửa lỗi crash khi tải ảnh",
+                    "epic_name": "EPIC-Performance",
+                    "issue_type": "request",
+                    "priority": "medium",
+                    "points": 3,
+                    "role": "Principal Engineer",
+                    "avatarUrl": ""
+                },
+                
+            ]
+        },
+        "in_progress": {
+            "title": "In Progress",
+            "columnId": "in_progress",
+            "items": [
+                {
+                    "issueId": "ERP11",
+                    "name": "Fabian",
+                    "summary": "Cập nhật giao diện người dùng trang đăng nhập",
+                    "epic_name": "EPIC-Data-Migration",
+                    "issue_type": "feature",
+                    "priority": "high",
+                    "points": 2,
+                    "role": "Engineer",
+                    "avatarUrl": ""
+                },
+                
+            ]
+        },
+        "done": {
+            "title": "Done",
+            "columnId": "done",
+            "items": [
+                
+            ]
+        }
+    },
+    "orderedColumnIds": [
+        "to_do",
+        "in_progress",
+        "done"
+    ]
+}
