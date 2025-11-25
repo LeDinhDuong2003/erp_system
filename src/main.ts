@@ -9,6 +9,19 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS for frontend
+  app.enableCors({
+    origin: [
+      'http://localhost:3001',
+      'http://localhost:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3000',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   // Swagger Configuration
   const config = new DocumentBuilder()
     .setTitle('ERP System API')
