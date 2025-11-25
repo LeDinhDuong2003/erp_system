@@ -136,11 +136,11 @@ export class EmployeeService {
         ].filter(Boolean) as any,
       });
 
-      if (existing) {
-        throw new ConflictException(
-          'Username, email, or employee code already exists',
-        );
-      }
+      // if (existing) {
+      //   throw new ConflictException(
+      //     'Username, email, or employee code already exists',
+      //   );
+      // }
     }
 
     const data: any = { ...updateEmployeeDto };
