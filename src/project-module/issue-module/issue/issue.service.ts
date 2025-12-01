@@ -13,6 +13,7 @@ import { WorkflowStatus } from '../../../database/entities/project-module/Workfl
 import { CreateIssueLinkDto } from './dto/create-issue-link.dto';
 import { Project } from 'src/database/entities/project-module/Project.entity';
 import { IssueHistoryService } from './issue-history.service';
+import { IssueNotificationService } from 'src/project-module/notification/issue-notification.service';
 
 @Injectable()
 export class IssueService {
@@ -47,6 +48,8 @@ export class IssueService {
     private readonly historyService: IssueHistoryService,
 
     private readonly dataSource: DataSource,
+
+    private readonly issueNotificationService: IssueNotificationService,
   ) {}
 
   /**
@@ -137,6 +140,8 @@ export class IssueService {
       `Issue ${issueCode} created`,
     );
 
+    await this.issueNotificationService.notifyIssueCreated(savedIssue.id);
+
     return savedIssue;
   }
 
@@ -215,6 +220,13 @@ export class IssueService {
         oldValue: issue.current_status_id,
         newValue: updateIssueDto.current_status_id,
       });
+
+      await this.issueNotificationService.notifyStatusChanged(
+        id,
+        issue.current_status_id,
+        updateIssueDto.current_status_id,
+        userId,
+      );
     }
 
     if (updateIssueDto.epic_link_id !== undefined && updateIssueDto.epic_link_id !== issue.epic_link_id) {
@@ -300,6 +312,19 @@ export class IssueService {
     // Log all changes
     if (changes.length > 0) {
       await this.historyService.logMultipleChanges(id, userId, changes);
+
+      const nonStatusChanges = changes.filter(c => c.fieldName !== 'current_status_id');
+      if (nonStatusChanges.length > 0) {
+        await this.issueNotificationService.notifyIssueUpdated(
+          id,
+          userId,
+          nonStatusChanges.map(c => ({
+            field: c.fieldName,
+            oldValue: String(c.oldValue),
+            newValue: String(c.newValue),
+          })),
+        );
+      }
     }
 
     return this.findOne(id);
@@ -456,6 +481,12 @@ export class IssueService {
       'assignee_added',
       null,
       `Employee ${employee.first_name} ${employee.last_name} (ID: ${employee_id})`,
+    );
+
+    await this.issueNotificationService.notifyIssueAssigned(
+      issueId,
+      employee_id,
+      userId,
     );
 
     return savedIssue;
@@ -778,8 +809,25 @@ export class IssueService {
 
   // -------------------- Reference Data --------------------
 
-  async getIssueTypes(): Promise<IssueType[]> {
-    return this.issueTypeRepository.find();
+  async getIssueTypes(projectId: number): Promise<IssueType[]> {
+    const project = await this.projectRepository.findOne({
+      where: { id: projectId },
+    });
+  
+    const issueTypes = await this.dataSource
+      .createQueryBuilder(IssueType, 'issue_type')
+      .innerJoin(
+        'workflow_scheme_mappings',
+        'mapping',
+        'mapping.issue_type_id = issue_type.id'
+      )
+      .where('mapping.workflow_scheme_id = :workflowSchemeId', {
+        workflowSchemeId: project?.workflow_scheme_id,
+      })
+      .orderBy('issue_type.type_name', 'ASC')
+      .getMany();
+  
+    return issueTypes;
   }
 
   async getProjectEpics(projectId: number): Promise<Epic[]> {

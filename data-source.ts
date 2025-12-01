@@ -19,7 +19,7 @@ import {
 
 import { 
   NotificationScheme,
-  Notification,
+  ProjectNotification,
 } from './src/database/entities/project-module/Notification.entity';
 
 // Issue entities (từ Issue.entity.ts)
@@ -80,7 +80,7 @@ export const AppDataSource = new DataSource({
 
     // Project Module - Notifications
     NotificationScheme,
-    Notification,
+    ProjectNotification,
     
     // Project Module - Issues
     IssueType,

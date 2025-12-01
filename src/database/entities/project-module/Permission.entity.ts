@@ -48,11 +48,21 @@ export class ProjectRole {
   @Column({ default: false })
   is_default!: boolean;
 
+  @Column({ nullable: true, type: 'text' })
+  permission_scheme_id: number;
+
+  @CreateDateColumn({ nullable: true, type: 'timestamp' })
+  created_at: Date;
+
   @OneToMany(() => ProjectPermission, (permission) => permission.project_role)
   permissions!: ProjectPermission[];
 
   @OneToMany(() => ProjectRoleAssignment, (pra) => pra.project_role)
   role_assignments!: ProjectRoleAssignment[];
+
+  @ManyToOne(() => PermissionScheme, (scheme) => scheme.permissions)
+  @JoinColumn({ name: 'permission_scheme_id' })
+  permission_scheme!: PermissionScheme;
 }
 
 // -------------------- Project Permission Entity (renamed from Permission) --------------------
