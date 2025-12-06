@@ -10,6 +10,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Employee } from '../database/entities/Employee.entity';
 import { Role } from '../database/entities/Role.entity';
 import { RefreshToken } from '../database/entities/RefreshToken.entity';
+import { EmailService } from '../common/services/email.service';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { RefreshToken } from '../database/entities/RefreshToken.entity';
       signOptions: { expiresIn: 3600 },
     }),
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, EmailService],
   controllers: [AuthController],
   exports: [AuthService],
 })

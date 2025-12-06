@@ -91,5 +91,18 @@ export class CreateEmployeeDto {
   @IsBoolean()
   @IsOptional()
   is_verified?: boolean;
+
+  // Salary settings
+  @IsOptional()
+  base_salary?: number;
+
+  @IsOptional()
+  allowance?: number;
+
+  @IsOptional()
+  insurance_rate?: number;
+
+  @IsOptional()
+  overtime_rate?: number;
 }
 
