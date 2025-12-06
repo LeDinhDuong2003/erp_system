@@ -14,6 +14,7 @@ import { EmployeePositionModule } from './employee-position/employee-position.mo
 import { AttendanceModule } from './attendance/attendance.module';
 import { EmployeeSalaryModule } from './employee-salary/employee-salary.module';
 import { LeaveRequestModule } from './leave-request/leave-request.module';
+import { SalaryCalculationModule } from './salary-calculation/salary-calculation.module';
 import { FileModule } from './file/file.module';
 import { ReportModule } from './report/report.module';
 import { SeedService } from './database/seed.service';
@@ -36,6 +37,12 @@ import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
 import { LeaveRequest } from './database/entities/LeaveRequest.entity';
 import { File } from './database/entities/File.entity';
 import { Report } from './database/entities/Report.entity';
+import { EmployeeDevice } from './database/entities/EmployeeDevice.entity';
+import { AttendanceChallenge } from './database/entities/AttendanceChallenge.entity';
+import { WorkScheduleSettings } from './database/entities/WorkScheduleSettings.entity';
+import { SalarySettings } from './database/entities/SalarySettings.entity';
+import { OvertimeRequest } from './database/entities/OvertimeRequest.entity';
+import { LateEarlyRequest } from './database/entities/LateEarlyRequest.entity';
 import { AssetManagementModule } from './asset-management/asset-management.module';
 import { Asset } from './database/assetmanagement/asset.entity';
 import { Category } from './database/assetmanagement/category.entity';
@@ -50,6 +57,7 @@ import { Notification } from './database/assetrequest/notification.entity';
 import { Supplier } from './database/assetrequest/supplier.entity';
 import { WorkflowSeederService } from './database/seeders/project-module/workflow.seeder';
 import { PermissionSeederService } from './database/seeders/project-module/permission.seeder';
+import { HrDataSeeder } from './database/seeders/hr-data.seeder';
 import {
   Workflow,
   WorkflowScheme,
@@ -109,12 +117,18 @@ import { StatisticsModule } from './project-module/statistics/statistics.module'
         LeaveRequest,
         File,
         Report,
+        EmployeeDevice,
+        AttendanceChallenge,
         Asset,
         Category,
         Assignment,
         Request,
         Notification,
-        Supplier, // THÊM DÒNG NÀY NẾU CHƯA CÓ
+        Supplier,
+        WorkScheduleSettings,
+        SalarySettings,
+        OvertimeRequest,
+        LateEarlyRequest,
       ],
       synchronize: false,
       schema: 'public',
@@ -157,9 +171,15 @@ import { StatisticsModule } from './project-module/statistics/statistics.module'
       LeaveRequest,
       File,
       Report,
+        EmployeeDevice,
+        AttendanceChallenge,
       Asset,
       Category,
-      Assignment, // THÊM NẾU CHƯA CÓ
+      Assignment,
+      WorkScheduleSettings,
+      SalarySettings,
+      OvertimeRequest,
+      LateEarlyRequest,
     ]),
     ProjectModule,
     StatisticsModule,
@@ -186,8 +206,9 @@ import { StatisticsModule } from './project-module/statistics/statistics.module'
     // DÒNG QUAN TRỌNG NHẤT – THÊM VÀO ĐÂY
     AssetHandoverModule,
     AssetRequestModule,
+    SalaryCalculationModule,
   ],
   controllers: [AppController],
-  providers: [AppService, SeedService, WorkflowSeederService, PermissionSeederService, NotificationSeederService],
+  providers: [AppService, SeedService, WorkflowSeederService, PermissionSeederService, NotificationSeederService, HrDataSeeder],
 })
 export class AppModule {}

@@ -60,6 +60,8 @@ import { EmployeeSalary } from './src/database/entities/EmployeeSalary.entity';
 import { LeaveRequest } from './src/database/entities/LeaveRequest.entity';
 import { File } from './src/database/entities/File.entity';
 import { Report } from './src/database/entities/Report.entity';
+import { EmployeeDevice } from './src/database/entities/EmployeeDevice.entity';
+import { AttendanceChallenge } from './src/database/entities/AttendanceChallenge.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -113,6 +115,8 @@ export const AppDataSource = new DataSource({
     LeaveRequest,
     File,
     Report,
+    EmployeeDevice,
+    AttendanceChallenge,
   ],
   migrations: ['src/migration/**/*.ts'],
   synchronize: false,

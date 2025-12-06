@@ -46,6 +46,21 @@ export class EmployeeSalary {
   @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true, default: 0 })
   allowance!: number | null;
 
+  @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true, default: 0, comment: 'Bảo hiểm' })
+  insurance!: number | null;
+
+  @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true, default: 0, comment: 'Lương OT' })
+  overtime_salary!: number | null;
+
+  @Column({ type: 'numeric', precision: 8, scale: 2, nullable: true, default: 0, comment: 'Số giờ OT' })
+  overtime_hours!: number | null;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, nullable: true, default: 0, comment: 'Số ngày làm việc' })
+  work_days!: number | null;
+
+  @Column({ type: 'numeric', precision: 5, scale: 2, nullable: true, default: 0, comment: 'Số ngày nghỉ có phép (đã duyệt)' })
+  approved_leave_days!: number | null;
+
   @Column({ type: 'numeric', precision: 12, scale: 2, nullable: true, default: 0 })
   deduction!: number | null;
 

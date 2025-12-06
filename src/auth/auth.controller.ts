@@ -8,6 +8,8 @@ import {
   HttpStatus,
   Delete,
   Body,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -101,6 +103,42 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Request() req: any) {
     await this.authService.revoke(req.user.userId);
+  }
+
+  @ApiOperation({
+    summary: 'Verify email',
+    description: 'Verify email address using verification token (GET - for email links)',
+  })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  @Get('verify-email')
+  async verifyEmailGet(@Query('token') token: string) {
+    if (!token) {
+      throw new BadRequestException('Token is required');
+    }
+    return this.authService.verifyEmail(token);
+  }
+
+  @ApiOperation({
+    summary: 'Verify email (POST)',
+    description: 'Verify email address using verification token (POST - for API calls)',
+  })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  @Post('verify-email')
+  async verifyEmailPost(@Body() body: { token: string }) {
+    return this.authService.verifyEmail(body.token);
+  }
+
+  @ApiOperation({
+    summary: 'Resend verification email',
+    description: 'Resend verification email to user',
+  })
+  @ApiResponse({ status: 200, description: 'Verification email sent' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @Post('resend-verification')
+  async resendVerification(@Body() body: { email: string }) {
+    return this.authService.resendVerificationEmail(body.email);
   }
 }
 

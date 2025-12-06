@@ -37,6 +37,46 @@ export class Attendance {
   @Column({ type: 'text', nullable: true })
   note!: string | null;
 
+  // Photo verification - S3 URLs
+  @Column({ type: 'text', nullable: true })
+  check_in_photo_url!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  check_out_photo_url!: string | null;
+
+  // GPS verification
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  check_in_latitude!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  check_in_longitude!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  check_out_latitude!: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  check_out_longitude!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  gps_accuracy!: number | null;
+
+  // Device verification
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  device_id!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  user_agent!: string | null;
+
+  @Column({ type: 'varchar', length: 45, nullable: true })
+  ip_address!: string | null;
+
+  // Verification status
+  @Column({ type: 'boolean', default: false })
+  is_verified!: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  verification_notes!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
 
@@ -44,4 +84,3 @@ export class Attendance {
   @JoinColumn({ name: 'employee_id' })
   employee!: Employee;
 }
-
