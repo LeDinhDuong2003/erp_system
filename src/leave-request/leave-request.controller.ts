@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { LeaveRequestService } from './leave-request.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
@@ -100,6 +101,23 @@ export class LeaveRequestController {
   @Roles('SUPER_ADMIN', 'ADMIN')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.leaveRequestService.remove(id);
+  }
+
+  @Get('balance/:employeeId')
+  getLeaveBalance(
+    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Query('year') year?: number,
+  ) {
+    return this.leaveRequestService.getLeaveBalance(employeeId, year ? parseInt(year.toString()) : undefined);
+  }
+
+  @Get('balance')
+  getMyLeaveBalance(@Request() req: any, @Query('year') year?: number) {
+    const employeeId = req.user?.id;
+    if (!employeeId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.leaveRequestService.getLeaveBalance(employeeId, year ? parseInt(year.toString()) : undefined);
   }
 }
 

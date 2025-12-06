@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -10,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Employee, EmployeeStatus } from '../database/entities/Employee.entity';
 import { RefreshToken } from '../database/entities/RefreshToken.entity';
+import { EmailService } from '../common/services/email.service';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +21,7 @@ export class AuthService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+    private readonly emailService: EmailService,
   ) {}
 
   async validateUser(username: string, password: string) {
@@ -44,6 +47,13 @@ export class AuthService {
     // Check if account is active
     if (employee.status !== EmployeeStatus.ACTIVE) {
       throw new ForbiddenException('Account is not active');
+    }
+
+    // Check if email is verified
+    if (!employee.is_verified) {
+      throw new ForbiddenException(
+        'Tài khoản chưa được xác thực. Vui lòng kiểm tra email và click vào link xác thực.',
+      );
     }
 
     // Check password
@@ -202,6 +212,92 @@ export class AuthService {
     }
 
     throw new UnauthorizedException('Invalid refresh token');
+  }
+
+  async verifyEmail(token: string) {
+    const employee = await this.employeeRepository.findOne({
+      where: { email_verification_token: token },
+    });
+
+    if (!employee) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    if (employee.is_verified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    // Check token expiry (24 hours)
+    if (employee.email_verification_token_created_at) {
+      const tokenAge = Date.now() - new Date(employee.email_verification_token_created_at).getTime();
+      const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      if (tokenAge > twentyFourHours) {
+        // Clear expired token
+        await this.employeeRepository.update(
+          { id: employee.id },
+          {
+            email_verification_token: null,
+            email_verification_token_created_at: null,
+          },
+        );
+        throw new BadRequestException('Verification token has expired. Please request a new verification email.');
+      }
+    }
+
+    // Update employee to verified
+    await this.employeeRepository.update(
+      { id: employee.id },
+      {
+        is_verified: true,
+        email_verified_at: new Date(),
+        email_verification_token: null, // Clear token after verification
+        email_verification_token_created_at: null,
+      },
+    );
+
+    return {
+      message: 'Email verified successfully. You can now login.',
+      email: employee.email,
+    };
+  }
+
+  async resendVerificationEmail(email: string) {
+    const employee = await this.employeeRepository.findOne({
+      where: { email },
+    });
+
+    if (!employee) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (employee.is_verified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    // Generate new token
+    const verificationToken = this.emailService.generateVerificationToken();
+
+    // Update token and set created_at (clear old token and timestamp)
+    await this.employeeRepository.update(
+      { id: employee.id },
+      {
+        email_verification_token: verificationToken,
+        email_verification_token_created_at: new Date(),
+      },
+    );
+
+    // Send email
+    await this.emailService.sendVerificationEmail(
+      employee.email,
+      employee.full_name,
+      verificationToken,
+    );
+
+    return {
+      message: 'Verification email sent successfully',
+      email: employee.email,
+    };
   }
 
   async revoke(userId: string) {

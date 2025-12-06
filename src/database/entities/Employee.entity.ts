@@ -181,6 +181,20 @@ export class Employee {
   @JoinColumn({ name: 'department_id' })
   department_relation!: Department | null; 
 
+  @Column({ type: 'int', default: 12, comment: 'Annual leave limit in days per year' })
+  annual_leave_limit!: number;
+
+  @Column({ type: 'int', default: 12, comment: 'Remaining annual leave days for current year' })
+  remaining_leave_days!: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, comment: 'Email verification token' })
+  email_verification_token!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, comment: 'Timestamp when email verification token was created' })
+  email_verification_token_created_at!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true, comment: 'Email verified timestamp' })
+  email_verified_at!: Date | null;
 }
 
 
