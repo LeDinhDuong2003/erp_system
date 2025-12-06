@@ -13,6 +13,9 @@ import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { AssignRolesDto } from './dto/assign-roles.dto';
 import * as bcrypt from 'bcrypt';
+import { EmailService } from '../common/services/email.service';
+import { SalarySettingsService } from '../salary-calculation/salary-settings.service';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
 export class EmployeeService {
@@ -23,6 +26,9 @@ export class EmployeeService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(EmployeeRoleAssignment)
     private readonly employeeRoleAssignmentRepository: Repository<EmployeeRoleAssignment>,
+    private readonly emailService: EmailService,
+    @Inject(forwardRef(() => SalarySettingsService))
+    private readonly salarySettingsService: SalarySettingsService,
   ) {}
 
   async create(createEmployeeDto: CreateEmployeeDto) {
@@ -53,10 +59,59 @@ export class EmployeeService {
 
     delete (data as any).password;
 
+    // Generate email verification token (trừ khi admin set is_verified = true)
+    if (!createEmployeeDto.is_verified) {
+      const verificationToken = this.emailService.generateVerificationToken();
+      (data as any).email_verification_token = verificationToken;
+      (data as any).email_verification_token_created_at = new Date();
+      (data as any).is_verified = false;
+      (data as any).email_verified_at = null;
+    } else {
+      // Nếu admin set is_verified = true, không cần token
+      (data as any).email_verification_token = null;
+      (data as any).email_verification_token_created_at = null;
+      (data as any).email_verified_at = new Date();
+    }
+
     const employeeEntity: Employee = this.employeeRepository.create(
       data as Partial<Employee>,
     );
     const employee: Employee = await this.employeeRepository.save(employeeEntity);
+    
+    // Gửi email verification (trừ khi đã verified)
+    if (!createEmployeeDto.is_verified && employee.email_verification_token) {
+      try {
+        await this.emailService.sendVerificationEmail(
+          employee.email,
+          employee.full_name,
+          employee.email_verification_token,
+        );
+      } catch (error) {
+        // Log error nhưng không fail việc tạo employee
+        console.error('Failed to send verification email:', error);
+      }
+    }
+
+    // Create salary settings if provided
+    if (
+      createEmployeeDto.base_salary !== undefined ||
+      createEmployeeDto.allowance !== undefined ||
+      createEmployeeDto.insurance_rate !== undefined ||
+      createEmployeeDto.overtime_rate !== undefined
+    ) {
+      try {
+        await this.salarySettingsService.setForEmployee(employee.id, {
+          base_salary: createEmployeeDto.base_salary,
+          allowance: createEmployeeDto.allowance,
+          insurance_rate: createEmployeeDto.insurance_rate,
+          overtime_rate: createEmployeeDto.overtime_rate,
+        });
+      } catch (error) {
+        console.error('Failed to create salary settings:', error);
+        // Don't fail employee creation if salary settings fail
+      }
+    }
+
     const full = await this.employeeRepository.findOne({
       where: { id: employee.id },
       relations: ['employee_role_assignments', 'employee_role_assignments.role'],
@@ -143,7 +198,10 @@ export class EmployeeService {
       // }
     }
 
-    const data: any = { ...updateEmployeeDto };
+    // Extract salary fields before updating employee (these are not Employee entity fields)
+    const { base_salary, allowance, insurance_rate, overtime_rate, ...employeeUpdateData } = updateEmployeeDto;
+    
+    const data: any = { ...employeeUpdateData };
 
     if (updateEmployeeDto.dob) {
       data.dob = new Date(updateEmployeeDto.dob);
@@ -156,6 +214,27 @@ export class EmployeeService {
     }
 
     await this.employeeRepository.update({ id }, data);
+    
+    // Update salary settings if provided
+    if (
+      base_salary !== undefined ||
+      allowance !== undefined ||
+      insurance_rate !== undefined ||
+      overtime_rate !== undefined
+    ) {
+      try {
+        await this.salarySettingsService.setForEmployee(id, {
+          base_salary,
+          allowance,
+          insurance_rate,
+          overtime_rate,
+        });
+      } catch (error) {
+        console.error('Failed to update salary settings:', error);
+        // Don't fail employee update if salary settings fail
+      }
+    }
+    
     const updated = await this.employeeRepository.findOne({
       where: { id },
       relations: ['employee_role_assignments', 'employee_role_assignments.role'],

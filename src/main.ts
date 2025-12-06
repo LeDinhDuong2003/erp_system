@@ -64,6 +64,11 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Loại bỏ các trường không có trong DTO
+      transform: true, // Tự động transform types
+      forbidNonWhitelisted: false, // Cho phép các trường không có trong DTO (sẽ bị loại bỏ bởi whitelist)
+      transformOptions: {
+        enableImplicitConversion: true, // Tự động convert types
+      },
     }),
   );
   // Transform BigInt thành string trong tất cả responses
