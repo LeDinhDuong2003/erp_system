@@ -5,6 +5,7 @@ import { Issue } from '../../../database/entities/project-module/Issue.entity';
 import { WorkflowStatus } from 'src/database/entities/project-module/Workflow.entity';
 import { MoveCardDto, ReorderCardsDto, ReorderColumnsDto } from './dto/board-operations.dto';
 import { IssueHistoryService } from './issue-history.service';
+import { IssueNotificationService } from 'src/project-module/notification/issue-notification.service';
 
 // Định nghĩa kiểu dữ liệu cho kết quả trả về
 interface IssuesByStatus {
@@ -27,6 +28,9 @@ export class IssueBoardService {
     private readonly dataSource: DataSource,
     
     private readonly historyService: IssueHistoryService,
+    
+    // THÊM: Inject IssueNotificationService
+    private readonly issueNotificationService: IssueNotificationService,
   ) {}
 
   
@@ -178,6 +182,7 @@ async reorderCards(statusId: number, dto: ReorderCardsDto) {
 /**
  * API 3: Move Card to Different Column
  * Di chuyển issue sang status mới và cập nhật order_index
+ * THÊM: Gửi email notification khi thay đổi status
  */
 async moveCard(issueId: number, dto: MoveCardDto, userId: number) {
     const { targetStatusId, targetIndex } = dto;
@@ -293,6 +298,22 @@ async moveCard(issueId: number, dto: MoveCardDto, userId: number) {
             }
         }
     });
+
+    // THÊM: Gửi email notification khi status thay đổi
+    // Chỉ gửi email khi thực sự thay đổi status (không phải chỉ reorder)
+    if (oldStatusId !== targetStatusId) {
+        try {
+            await this.issueNotificationService.notifyStatusChanged(
+                issueId,
+                oldStatusId,
+                targetStatusId,
+                userId,
+            );
+        } catch (error) {
+            // Log error nhưng không làm fail API
+            console.error('Failed to send status change notification:', error);
+        }
+    }
 
     return {
         message: 'Card moved successfully',

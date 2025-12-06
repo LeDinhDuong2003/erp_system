@@ -9,6 +9,7 @@ import { IssueComment } from '../../../database/entities/project-module/Issue.en
 import { CreateIssueCommentDto } from './dto/create-issue-comment.dto';
 import { UpdateIssueCommentDto } from './dto/update-issue-comment.dto';
 import { Issue } from '../../../database/entities/project-module/Issue.entity';
+import { IssueNotificationService } from 'src/project-module/notification/issue-notification.service';
 
 @Injectable()
 export class IssueCommentService {
@@ -17,6 +18,8 @@ export class IssueCommentService {
     private readonly commentRepository: Repository<IssueComment>,
     @InjectRepository(Issue)
     private readonly issueRepository: Repository<Issue>, // Cần kiểm tra Issue có tồn tại không
+
+    private readonly issueNotificationService: IssueNotificationService,
   ) {}
 
   // POST: Tạo bình luận mới cho một Issue cụ thể
@@ -30,7 +33,15 @@ export class IssueCommentService {
       ...createCommentDto,
       issue_id: issueId,
     });
-    return await this.commentRepository.save(newComment);
+
+    const savedComment = await this.commentRepository.save(newComment);
+
+    await this.issueNotificationService.notifyIssueCommented(
+      issueId,
+      createCommentDto.employee_id,
+      createCommentDto.content,
+    );
+    return savedComment;
   }
 
   // GET: Lấy tất cả bình luận của một Issue
