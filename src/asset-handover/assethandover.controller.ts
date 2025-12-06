@@ -35,11 +35,21 @@ export class AssetHandoverController {
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('search') search?: string,
     @Query('employeeId') employeeId?: number,
+    @Query('departmentId') departmentId?: number, // ← THÊM QUERY PARAM MỚI
     @Query('status') status?: AssignmentStatus,
     @Query('sortBy') sortBy = 'created_at',
     @Query('sortOrder') sortOrder: 'ASC' | 'DESC' = 'DESC',
   ) {
-    return this.service.findAll(page, pageSize, search, employeeId as any, status as any, sortBy, sortOrder);
+    return this.service.findAll(
+      page, 
+      pageSize, 
+      search, 
+      employeeId as any, 
+      departmentId as any, // ← TRUYỀN VÀO SERVICE
+      status as any, 
+      sortBy, 
+      sortOrder
+    );
   }
 
   // GET /api/assignments/:id
@@ -53,7 +63,6 @@ export class AssetHandoverController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
   create(@Body() dto: CreateAssignmentDto, @Body('performedById') performedById?: number) {
-    // performedById can be passed optionally (or taken from req.user in real usage)
     return this.service.create(dto, performedById);
   }
 
@@ -101,7 +110,7 @@ export class AssetHandoverController {
     return this.service.statistics();
   }
 
-  // GET /api/assets/available
+  // GET /api/assignments/assets/available
   @Get('assets/available')
   getAvailableAssets(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -112,13 +121,13 @@ export class AssetHandoverController {
     return this.service.getAvailableAssets(page, pageSize, search, categoryId as any);
   }
 
-  // GET /api/assets/:id/current-holder
+  // GET /api/assignments/assets/:id/current-holder
   @Get('assets/:id/current-holder')
   getCurrentHolder(@Param('id', ParseIntPipe) id: number) {
     return this.service.getCurrentHolder(id);
   }
 
-  // PATCH /api/assets/:id/holder
+  // PATCH /api/assignments/assets/:id/holder
   @Patch('assets/:id/holder')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
