@@ -9,7 +9,7 @@ import { AssignEmployeeDto } from './dto/assign-employee.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { IssueType, Epic, IssueComment, IssueLink, IssueChangeHistory } from '../../../database/entities/project-module/Issue.entity';
-import { WorkflowStatus } from '../../../database/entities/project-module/Workflow.entity';
+import { WorkflowSchemeMapping, WorkflowStatus } from '../../../database/entities/project-module/Workflow.entity';
 import { CreateIssueLinkDto } from './dto/create-issue-link.dto';
 import { Project } from 'src/database/entities/project-module/Project.entity';
 import { IssueHistoryService } from './issue-history.service';
@@ -41,6 +41,9 @@ export class IssueService {
 
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
+
+    @InjectRepository(WorkflowSchemeMapping)
+    private readonly workflowSchemeMappingRepository: Repository<WorkflowSchemeMapping>,
 
     @InjectRepository(IssueChangeHistory)
     private readonly issueChangeHistoryRepository: Repository<IssueChangeHistory>,
@@ -859,5 +862,52 @@ export class IssueService {
     }
 
     return this.historyService.getIssueHistory(issueId);
+  }
+
+  async getProjectWorkflows(projectId: number): Promise<Array<{ id: number; workflow_name: string }>> {
+    // 1. Lấy project
+    const project = await this.projectRepository.findOne({
+        where: { id: projectId },
+    });
+
+    if (!project) {
+        throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    if (!project.workflow_scheme_id) {
+        // Nếu project chưa có workflow scheme, trả về empty array
+        return [];
+    }
+
+    // 2. Lấy workflow scheme mappings của project
+    const workflowSchemeMappings = await this.workflowSchemeMappingRepository.find({
+        where: { workflow_scheme_id: project.workflow_scheme_id },
+        relations: ['workflow'],
+    });
+
+    if (!workflowSchemeMappings || workflowSchemeMappings.length === 0) {
+        // Nếu không có mappings, trả về empty array
+        return [];
+    }
+
+    // 3. Lấy unique workflows (vì nhiều issue types có thể dùng chung 1 workflow)
+    const workflowMap = new Map<number, string>();
+    
+    for (const mapping of workflowSchemeMappings) {
+        if (mapping.workflow && mapping.workflow.id && mapping.workflow.workflow_name) {
+            workflowMap.set(mapping.workflow.id, mapping.workflow.workflow_name);
+        }
+    }
+
+    // 4. Convert Map sang Array
+    const workflows = Array.from(workflowMap.entries()).map(([id, workflow_name]) => ({
+        id,
+        workflow_name,
+    }));
+
+    // Sort by id
+    workflows.sort((a, b) => a.id - b.id);
+
+    return workflows;
   }
 }

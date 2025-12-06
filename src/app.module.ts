@@ -66,6 +66,7 @@ import { ProjectRoleModule } from './project-module/project-role-management/proj
 import { NotificationScheme, ProjectNotification } from './database/entities/project-module/Notification.entity';
 import { NotificationSeederService } from './database/seeders/project-module/notification.seeder';
 import { NotificationModule } from './project-module/notification/notification.module';
+import { StatisticsModule } from './project-module/statistics/statistics.module';
 
 @Module({
   imports: [
@@ -161,6 +162,7 @@ import { NotificationModule } from './project-module/notification/notification.m
       Assignment, // THÊM NẾU CHƯA CÓ
     ]),
     ProjectModule,
+    StatisticsModule,
     EpicModule,
     IssueModule,
     SprintModule,

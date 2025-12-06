@@ -62,6 +62,18 @@ export class IssueController {
         return this.issueService.getProjectEmployees(projectId);
     }
 
+    // -------------------- NEW: Get Project Workflows --------------------
+    /**
+     * GET /issues/workflows?projectId=1
+     * Lấy danh sách workflows của một project
+     * Trả về: Array<{ id: number, workflow_name: string }>
+     */
+    @Get('workflows')
+    @RequirePermission('browse_project')
+    getProjectWorkflows(@Query('projectId', ParseIntPipe) projectId: number) {
+        return this.issueService.getProjectWorkflows(projectId);
+    }
+
     @Get(':id')
     @RequirePermission('browse_project')
     findOne(@Param('id', ParseIntPipe) id: number) {

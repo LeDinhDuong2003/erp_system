@@ -4,7 +4,7 @@ import { Epic, Issue, IssueComment, IssueLink, IssueType, IssueChangeHistory } f
 import { IssueService } from './issue.service';
 import { IssueController } from './issue.controller';
 import { Employee } from 'src/database/entities/Employee.entity';
-import { WorkflowStatus } from 'src/database/entities/project-module/Workflow.entity';
+import { WorkflowSchemeMapping, WorkflowStatus } from 'src/database/entities/project-module/Workflow.entity';
 import { IssueBoardService } from './status.service';
 import { Project } from 'src/database/entities/project-module/Project.entity';
 import { IssueHistoryService } from './issue-history.service';
@@ -22,6 +22,7 @@ import { NotificationModule } from 'src/project-module/notification/notification
       Project,
       Epic,
       IssueChangeHistory,
+      WorkflowSchemeMapping,
     ]),
     NotificationModule
   ],
