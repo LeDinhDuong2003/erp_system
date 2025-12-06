@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, ManyToOne, JoinColumn, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { EmployeeRoleAssignment } from './EmployeeRoleAssignment.entity';
 import { PasswordResetToken } from './PasswordResetToken.entity';
 import { RefreshToken } from './RefreshToken.entity';
@@ -12,6 +12,7 @@ import { EmployeeSalary } from './EmployeeSalary.entity';
 import { LeaveRequest } from './LeaveRequest.entity';
 import { File } from './File.entity';
 import { Report } from './Report.entity';
+import { Department } from './Department.entity'; 
 
 export enum Gender {
   MALE = 'MALE',
@@ -172,6 +173,13 @@ export class Employee {
 
   @Column({ type: 'timestamp', nullable: true })
   face_registered_at!: Date | null;
+
+  @Column({ type: 'int', nullable: true })
+  department_id!: number | null;
+
+  @ManyToOne(() => Department, { nullable: true })
+  @JoinColumn({ name: 'department_id' })
+  department_relation!: Department | null; 
 
   @Column({ type: 'int', default: 12, comment: 'Annual leave limit in days per year' })
   annual_leave_limit!: number;
