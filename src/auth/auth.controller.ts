@@ -140,6 +140,27 @@ export class AuthController {
   async resendVerification(@Body() body: { email: string }) {
     return this.authService.resendVerificationEmail(body.email);
   }
+
+  @Post('password-change/request-otp')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Request OTP for password change' })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully' })
+  async requestPasswordChangeOTP(@Request() req: any) {
+    return this.authService.requestPasswordChangeOTP(req.user.id);
+  }
+
+  @Post('password-change/verify')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Verify OTP and change password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  async verifyPasswordChangeOTP(
+    @Request() req: any,
+    @Body() body: { otp: string; new_password: string },
+  ) {
+    return this.authService.verifyPasswordChangeOTP(req.user.id, body.otp, body.new_password);
+  }
 }
 
 

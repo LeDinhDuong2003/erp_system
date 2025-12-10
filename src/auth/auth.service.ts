@@ -13,8 +13,16 @@ import { Employee, EmployeeStatus } from '../database/entities/Employee.entity';
 import { RefreshToken } from '../database/entities/RefreshToken.entity';
 import { EmailService } from '../common/services/email.service';
 
+interface OTPData {
+  otp: string;
+  expiresAt: Date;
+}
+
 @Injectable()
 export class AuthService {
+  // In-memory OTP storage (use Redis in production)
+  private passwordChangeOTPs = new Map<number, OTPData>();
+
   constructor(
     private readonly jwtService: JwtService,
     @InjectRepository(Employee)
@@ -22,7 +30,17 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly emailService: EmailService,
-  ) {}
+  ) {
+    // Cleanup expired OTPs every 5 minutes
+    setInterval(() => {
+      const now = new Date();
+      for (const [userId, otpData] of this.passwordChangeOTPs.entries()) {
+        if (otpData.expiresAt < now) {
+          this.passwordChangeOTPs.delete(userId);
+        }
+      }
+    }, 5 * 60 * 1000);
+  }
 
   async validateUser(username: string, password: string) {
     const employee = await this.employeeRepository.findOne({
@@ -339,5 +357,82 @@ export class AuthService {
       .from(RefreshToken)
       .where('expires_at < :cutoffDate', { cutoffDate })
       .execute();
+  }
+
+  /**
+   * Request OTP for password change
+   */
+  async requestPasswordChangeOTP(userId: number): Promise<{ message: string }> {
+    const employee = await this.employeeRepository.findOne({ where: { id: userId } });
+    if (!employee) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Generate OTP
+    const otp = this.emailService.generateOTP();
+    
+    // Store OTP in memory (use Redis in production)
+    const otpExpiresAt = new Date();
+    otpExpiresAt.setMinutes(otpExpiresAt.getMinutes() + 10); // OTP expires in 10 minutes
+
+    this.passwordChangeOTPs.set(userId, {
+      otp,
+      expiresAt: otpExpiresAt,
+    });
+
+    // Send OTP email
+    await this.emailService.sendPasswordChangeOTP(employee.email, employee.full_name, otp);
+
+    return {
+      message: 'OTP sent successfully to your email',
+    };
+  }
+
+  /**
+   * Verify OTP and change password
+   */
+  async verifyPasswordChangeOTP(userId: number, otp: string, newPassword: string): Promise<{ message: string }> {
+    const employee = await this.employeeRepository.findOne({ where: { id: userId } });
+    if (!employee) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Retrieve stored OTP
+    const storedOTP = this.passwordChangeOTPs.get(userId);
+    if (!storedOTP) {
+      throw new BadRequestException('OTP not found or expired. Please request a new OTP.');
+    }
+
+    // Check expiration
+    if (storedOTP.expiresAt < new Date()) {
+      this.passwordChangeOTPs.delete(userId);
+      throw new BadRequestException('OTP has expired. Please request a new OTP.');
+    }
+
+    // Verify OTP
+    if (storedOTP.otp !== otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    // Validate new password
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    
+    // Update password
+    await this.employeeRepository.update(
+      { id: userId },
+      { password_hash: passwordHash }
+    );
+
+    // Remove used OTP
+    this.passwordChangeOTPs.delete(userId);
+
+    return {
+      message: 'Password changed successfully',
+    };
   }
 }

@@ -61,15 +61,17 @@ export class HrDataSeeder {
       const employees = await this.seedEmployees(departments, positions, roles);
       this.logger.log(`✓ Seeded ${employees.length} employees`);
 
-      // 6. Seed Attendance for October and November
-      await this.seedAttendance(employees, 2024, 10);
-      await this.seedAttendance(employees, 2024, 11);
-      this.logger.log('✓ Seeded attendance records for October and November');
+      // 6. Seed Attendance for October, November, and December (2025)
+      await this.seedAttendance(employees, 2025, 10);
+      await this.seedAttendance(employees, 2025, 11);
+      await this.seedAttendance(employees, 2025, 12);
+      this.logger.log('✓ Seeded attendance records for October, November, and December 2025');
 
-      // 7. Seed Salary Records
-      await this.seedSalaryRecords(employees, 2024, 10);
-      await this.seedSalaryRecords(employees, 2024, 11);
-      this.logger.log('✓ Seeded salary records for October and November');
+      // 7. Seed Salary Records (2025)
+      await this.seedSalaryRecords(employees, 2025, 10);
+      await this.seedSalaryRecords(employees, 2025, 11);
+      await this.seedSalaryRecords(employees, 2025, 12);
+      this.logger.log('✓ Seeded salary records for October, November, and December 2025');
 
       this.logger.log('✅ HR data seeding completed successfully!');
     } catch (error) {

@@ -30,6 +30,57 @@ export class S3Service {
   }
 
   /**
+   * Generate a pre-signed URL for uploading avatar
+   * @param employeeId - Employee ID
+   * @param contentType - MIME type (image/jpeg, image/png)
+   */
+  async generateAvatarUploadUrl(
+    employeeId: number,
+    contentType: string = 'image/jpeg',
+  ): Promise<PresignedUrlResponse> {
+    // Validate content type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(contentType)) {
+      throw new BadRequestException(
+        `Invalid content type. Allowed types: ${allowedTypes.join(', ')}`,
+      );
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const uniqueId = uuidv4().substring(0, 8);
+    const extension = contentType.split('/')[1] || 'jpg';
+
+    // Key format: avatars/{employee_id}/avatar_{timestamp}_{uuid}.{ext}
+    const key = `avatars/${employeeId}/avatar_${timestamp}_${uniqueId}.${extension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ContentType: contentType,
+      Metadata: {
+        'employee-id': employeeId.toString(),
+        'upload-type': 'avatar',
+        'upload-timestamp': timestamp.toString(),
+      },
+    });
+
+    // URL expires in 5 minutes
+    const expiresIn = 300;
+    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn });
+
+    // The final URL where the file will be accessible
+    const fileUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+
+    return {
+      uploadUrl,
+      fileUrl,
+      key,
+      expiresIn,
+    };
+  }
+
+  /**
    * Generate a pre-signed URL for uploading attendance photo
    * @param employeeId - Employee ID
    * @param type - 'check_in' or 'check_out'

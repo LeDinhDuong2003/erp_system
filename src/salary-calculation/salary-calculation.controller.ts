@@ -60,6 +60,14 @@ export class SalaryCalculationController {
     return this.salaryCalculationService.approveSalary(id);
   }
 
+  @Put('approve-all')
+  @Roles('SUPER_ADMIN', 'MANAGER')
+  @ApiOperation({ summary: 'Approve all salaries for a specific month (Admin/Manager only)' })
+  @ApiResponse({ status: 200, description: 'Salaries approved successfully' })
+  async approveAll(@Body() body: { year: number; month: number }) {
+    return this.salaryCalculationService.approveAllSalaries(body.year, body.month);
+  }
+
   @Put(':id/mark-paid')
   @Roles('SUPER_ADMIN', 'MANAGER')
   @ApiOperation({ summary: 'Mark salary as paid (Admin/Manager only)' })

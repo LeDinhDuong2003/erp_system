@@ -7,6 +7,7 @@ import { Role } from '../database/entities/Role.entity';
 import { EmployeeRoleAssignment } from '../database/entities/EmployeeRoleAssignment.entity';
 import { EmailService } from '../common/services/email.service';
 import { SalaryCalculationModule } from '../salary-calculation/salary-calculation.module';
+import { S3Service } from '../attendance/s3.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { SalaryCalculationModule } from '../salary-calculation/salary-calculatio
     forwardRef(() => SalaryCalculationModule),
   ],
   controllers: [EmployeeController],
-  providers: [EmployeeService, EmailService],
+  providers: [EmployeeService, EmailService, S3Service],
   exports: [EmployeeService],
 })
 export class EmployeeModule {}
