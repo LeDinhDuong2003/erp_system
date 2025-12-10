@@ -21,16 +21,16 @@ export class NotificationScheme {
   @Column({ type: 'varchar', nullable: true })
   scheme_description!: string | null;
 
-  @OneToMany(() => Notification, (notification) => notification.notification_scheme)
-  notifications!: Notification[];
+  @OneToMany(() => ProjectNotification, (notification) => notification.notification_scheme)
+  notifications!: ProjectNotification[];
 
   @OneToMany(() => Project, (project) => project.notification_scheme)
   projects!: Project[];
 }
 
 // -------------------- Notification Entity --------------------
-@Entity({ name: 'notifications' })
-export class Notification {
+@Entity({ name: 'project_notifications' })
+export class ProjectNotification {
   @PrimaryGeneratedColumn()
   id!: number;
 

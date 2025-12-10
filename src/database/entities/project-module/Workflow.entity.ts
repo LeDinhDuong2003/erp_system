@@ -100,8 +100,8 @@ export class WorkflowSchemeMapping {
   @JoinColumn({ name: 'issue_type_id' })
   issue_type!: IssueType;
 
-  // @ManyToOne(() => Workflow, (workflow) => workflow.workflow_mappings)
-  // @JoinColumn({ name: 'workflow_id' })
+  @ManyToOne(() => Workflow, (workflow) => workflow.workflow_mappings)
+  @JoinColumn({ name: 'workflow_id' })
   workflow!: Workflow;
 }
 

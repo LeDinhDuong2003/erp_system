@@ -56,6 +56,7 @@ import { Request } from './database/assetrequest/request.entity';
 import { Notification } from './database/assetrequest/notification.entity';
 import { Supplier } from './database/assetrequest/supplier.entity';
 import { WorkflowSeederService } from './database/seeders/project-module/workflow.seeder';
+import { PermissionSeederService } from './database/seeders/project-module/permission.seeder';
 import { HrDataSeeder } from './database/seeders/hr-data.seeder';
 import {
   Workflow,
@@ -67,6 +68,14 @@ import { EpicModule } from './project-module/epic/epic.module';
 import { SprintModule } from './project-module/sprint/sprint.module';
 import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.entity';
 import { getDatabaseConfig } from './common/utils/database-url-parser';
+import { PermissionScheme, ProjectPermission, ProjectRole, ProjectRoleAssignment } from './database/entities/project-module/Permission.entity';
+import { TeamModule } from './project-module/team/team.module';
+import { ProjectPermissionModule } from './project-module/permission-system/project-permission.module';
+import { ProjectRoleModule } from './project-module/project-role-management/project-role.module';
+import { NotificationScheme, ProjectNotification } from './database/entities/project-module/Notification.entity';
+import { NotificationSeederService } from './database/seeders/project-module/notification.seeder';
+import { NotificationModule } from './project-module/notification/notification.module';
+import { StatisticsModule } from './project-module/statistics/statistics.module';
 
 @Module({
   imports: [
@@ -94,8 +103,14 @@ import { getDatabaseConfig } from './common/utils/database-url-parser';
         WorkflowScheme,
         WorkflowStatus,
         WorkflowSchemeMapping,
+        PermissionScheme,
+        ProjectRole,
+        ProjectPermission,
+        ProjectRoleAssignment,
         Epic,
         IssueComment,
+        ProjectNotification,
+        NotificationScheme,
         Position,
         Department,
         EmployeePosition,
@@ -142,8 +157,14 @@ import { getDatabaseConfig } from './common/utils/database-url-parser';
       WorkflowScheme,
       WorkflowStatus,
       WorkflowSchemeMapping,
+      PermissionScheme,
+      ProjectRole,
+      ProjectPermission,
+      ProjectRoleAssignment,
       Epic,
       IssueComment,
+      ProjectNotification,
+      NotificationScheme,
       Position,
       Department,
       EmployeePosition,
@@ -163,10 +184,14 @@ import { getDatabaseConfig } from './common/utils/database-url-parser';
       LateEarlyRequest,
     ]),
     ProjectModule,
+    StatisticsModule,
     EpicModule,
     IssueModule,
     SprintModule,
     IssueCommentModule,
+    ProjectPermissionModule,
+    ProjectRoleModule,
+    NotificationModule,
     EmployeeModule,
     RoleModule,
     PermissionModule,
@@ -178,6 +203,7 @@ import { getDatabaseConfig } from './common/utils/database-url-parser';
     LeaveRequestModule,
     FileModule,
     ReportModule,
+    TeamModule,
 
     // DÒNG QUAN TRỌNG NHẤT – THÊM VÀO ĐÂY
     AssetHandoverModule,
@@ -185,6 +211,6 @@ import { getDatabaseConfig } from './common/utils/database-url-parser';
     SalaryCalculationModule,
   ],
   controllers: [AppController],
-  providers: [AppService, SeedService, WorkflowSeederService, HrDataSeeder],
+  providers: [AppService, SeedService, WorkflowSeederService, PermissionSeederService, NotificationSeederService, HrDataSeeder],
 })
 export class AppModule {}

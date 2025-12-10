@@ -3,7 +3,6 @@ import {
   BadRequestException,
   NotFoundException,
   ConflictException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial} from 'typeorm';
@@ -29,6 +28,7 @@ export class AssetHandoverService {
     pageSize = 10,
     search?: string,
     employeeId?: number,
+    departmentId?: number, // ← THÊM THAM SỐ MỚI
     status?: AssignmentStatus,
     sortBy = 'created_at',
     sortOrder: 'ASC' | 'DESC' = 'DESC',
@@ -36,7 +36,9 @@ export class AssetHandoverService {
     const skip = (page - 1) * pageSize;
     const qb = this.assignmentRepository.createQueryBuilder('a')
       .leftJoinAndSelect('a.asset', 'asset')
+      .leftJoinAndSelect('asset.category', 'category')
       .leftJoinAndSelect('a.employee', 'employee')
+      .leftJoinAndSelect('employee.department_relation', 'department') // ← JOIN DEPARTMENT
       .leftJoinAndSelect('a.assigned_by', 'assigned_by')
       .leftJoinAndSelect('a.returned_by', 'returned_by');
 
@@ -48,6 +50,10 @@ export class AssetHandoverService {
     }
     if (employeeId) {
       qb.andWhere('employee.id = :employeeId', { employeeId });
+    }
+    // ✅ LỌC THEO PHÒNG BAN
+    if (departmentId) {
+      qb.andWhere('employee.department_id = :departmentId', { departmentId });
     }
     if (status) {
       qb.andWhere('a.status = :status', { status });
@@ -70,23 +76,22 @@ export class AssetHandoverService {
   async findOne(id: number) {
     const assignment = await this.assignmentRepository.findOne({
       where: { id },
-      relations: ['asset', 'employee', 'assigned_by', 'returned_by'],
+      relations: ['asset', 'asset.category', 'employee', 'employee.department_relation', 'assigned_by', 'returned_by'],
     });
     if (!assignment) throw new NotFoundException('Assignment not found');
     return assignment;
   }
 
   async create(dto: CreateAssignmentDto, performedById?: number) {
-    // check asset exists
     const asset = await this.assetRepository.findOne({ where: { id: dto.asset_id } });
     if (!asset) throw new BadRequestException('Asset not found');
 
-    // check employee exists
-    const employee = await this.employeeRepository.findOne({ where: { id: dto.employee_id } });
+    const employee = await this.employeeRepository.findOne({ 
+      where: { id: dto.employee_id },
+      relations: ['department_relation']
+    });
     if (!employee) throw new BadRequestException('Employee not found');
 
-    // check asset is available (not currently assigned)
-    // We consider asset.current_holder_id null or asset.status != IN_USE as available
     if (asset.current_holder_id) {
       throw new ConflictException('Tài sản đã được phân công cho người khác');
     }
@@ -107,10 +112,8 @@ export class AssetHandoverService {
       assigned_by: assignedBy ?? null,
     } as DeepPartial<Assignment>);
 
-    // Save assignment
     const saved = await this.assignmentRepository.save(entity);
 
-    // Update asset current holder and status
     asset.current_holder_id = employee.id;
     asset.current_assignment_date = assignmentDate;
     asset.status = AssetStatus.IN_USE;
@@ -129,7 +132,6 @@ export class AssetHandoverService {
 
     const returnDate = dto.return_date ?? new Date().toISOString().slice(0, 10);
 
-    // Update assignment fields
     assignment.return_date = returnDate;
     assignment.return_reason = dto.return_reason ?? undefined;
     assignment.condition_on_return = dto.condition_on_return ?? undefined;
@@ -145,12 +147,10 @@ export class AssetHandoverService {
 
     const saved = await this.assignmentRepository.save(assignment);
 
-    // Update asset: clear current holder and set status to AVAILABLE or appropriate
     const asset = assignment.asset;
     asset.current_holder_id = undefined;
     asset.current_assignment_date = undefined;
 
-    // Optionally set asset.status to NEW or IN_USE->RETURNED logic; we'll set to NEW if previously IN_USE
     if (asset.status === AssetStatus.IN_USE) {
       asset.status = AssetStatus.NEW;
     }
@@ -163,7 +163,6 @@ export class AssetHandoverService {
     const assignment = await this.assignmentRepository.findOne({ where: { id } });
     if (!assignment) throw new NotFoundException('Assignment not found');
 
-    // Business rule: allow delete only if returned OR allow admins only (handled by controller guards)
     if (assignment.status === AssignmentStatus.ASSIGNED) {
       throw new BadRequestException('Không thể xóa bàn giao đang đang sử dụng. Thu hồi trước khi xóa.');
     }
@@ -203,11 +202,9 @@ export class AssetHandoverService {
   }
 
   async statistics() {
-    // Simple statistics example - counts
     const totalAssigned = await this.assignmentRepository.count({ where: { status: AssignmentStatus.ASSIGNED } });
     const totalReturned = await this.assignmentRepository.count({ where: { status: AssignmentStatus.RETURNED } });
 
-    // By category / department: needs joins (example by asset.category)
     const byCategory = await this.assignmentRepository.createQueryBuilder('a')
       .leftJoin('a.asset', 'asset')
       .leftJoin('asset.category', 'category')
@@ -247,7 +244,10 @@ export class AssetHandoverService {
     const asset = await this.assetRepository.findOne({ where: { id: assetId } });
     if (!asset) throw new NotFoundException('Asset not found');
     if (!asset.current_holder_id) return null;
-    const employee = await this.employeeRepository.findOne({ where: { id: asset.current_holder_id } });
+    const employee = await this.employeeRepository.findOne({ 
+      where: { id: asset.current_holder_id },
+      relations: ['department_relation']
+    });
     return employee;
   }
 
@@ -262,7 +262,6 @@ export class AssetHandoverService {
       asset.status = AssetStatus.IN_USE;
       asset.current_assignment_date = new Date().toISOString().slice(0, 10);
     } else {
-      // clear holder
       asset.current_holder_id = undefined;
       asset.current_assignment_date = undefined;
       asset.status = AssetStatus.NEW;
