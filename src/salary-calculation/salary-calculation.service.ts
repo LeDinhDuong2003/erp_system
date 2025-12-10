@@ -130,26 +130,44 @@ export class SalaryCalculationService {
       0,
     );
 
-    // Calculate base salary
-    const baseSalary = Number(salarySettings.base_salary);
+    // Calculate base salary - ensure it's a valid number
+    const baseSalary = Number(salarySettings.base_salary) || 0;
+    if (isNaN(baseSalary) || baseSalary <= 0) {
+      throw new BadRequestException('Base salary must be a valid positive number');
+    }
 
     // Calculate salary per day
     const salaryPerDay = baseSalary / 22; // Assuming 22 working days per month
+    if (isNaN(salaryPerDay)) {
+      throw new BadRequestException('Error calculating salary per day');
+    }
 
     // Calculate salary based on work days
-    const workDaysSalary = workDays * salaryPerDay;
+    const workDaysSalary = (workDays || 0) * salaryPerDay;
+    if (isNaN(workDaysSalary)) {
+      throw new BadRequestException('Error calculating work days salary');
+    }
 
     // Calculate overtime salary
     const hourlyRate = Number(salarySettings.hourly_rate) || baseSalary / (8 * 22);
     const overtimeRate = Number(salarySettings.overtime_rate) || 1.5;
-    const overtimeSalary = overtimeHours * hourlyRate * overtimeRate;
+    const overtimeSalary = (overtimeHours || 0) * (isNaN(hourlyRate) ? 0 : hourlyRate) * (isNaN(overtimeRate) ? 1.5 : overtimeRate);
+    if (isNaN(overtimeSalary)) {
+      throw new BadRequestException('Error calculating overtime salary');
+    }
 
     // Calculate allowance
     const allowance = Number(salarySettings.allowance) || 0;
+    if (isNaN(allowance)) {
+      throw new BadRequestException('Error calculating allowance');
+    }
 
     // Calculate insurance (deduction)
     const insuranceRate = Number(salarySettings.insurance_rate) || 10.5;
-    const insurance = (baseSalary * insuranceRate) / 100;
+    const insurance = (baseSalary * (isNaN(insuranceRate) ? 10.5 : insuranceRate)) / 100;
+    if (isNaN(insurance)) {
+      throw new BadRequestException('Error calculating insurance');
+    }
 
     // Calculate deductions (late/early penalties if not approved)
     const deduction = this.calculateDeductions(
@@ -158,37 +176,48 @@ export class SalaryCalculationService {
       workSchedule,
       hourlyRate,
     );
+    if (isNaN(deduction)) {
+      throw new BadRequestException('Error calculating deductions');
+    }
 
-    // Calculate total salary
-    const totalSalary = workDaysSalary + overtimeSalary + allowance - insurance - deduction;
+    // Calculate total salary - ensure all values are valid numbers
+    const totalSalary = (workDaysSalary || 0) + (overtimeSalary || 0) + (allowance || 0) - (insurance || 0) - (deduction || 0);
+    if (isNaN(totalSalary)) {
+      throw new BadRequestException('Error calculating total salary');
+    }
 
-    // Create or update salary record
+    // Create or update salary record - ensure all values are valid numbers
     const salaryData: Partial<EmployeeSalary> = {
       employee_id: employeeId,
       month: salaryDate,
-      base_salary: baseSalary,
-      work_hours: totalWorkHours,
-      work_days: workDays,
+      base_salary: isNaN(baseSalary) ? 0 : baseSalary,
+      work_hours: isNaN(totalWorkHours) ? 0 : totalWorkHours,
+      work_days: isNaN(workDays) ? 0 : workDays,
       approved_leave_days: approvedLeaves.reduce(
-        (total, leave) => total + (Number(leave.total_days) || 0),
+        (total, leave) => {
+          const days = Number(leave.total_days) || 0;
+          return total + (isNaN(days) ? 0 : days);
+        },
         0,
       ),
-      overtime_hours: overtimeHours,
-      overtime_salary: overtimeSalary,
-      allowance: allowance,
-      insurance: insurance,
-      deduction: deduction,
+      overtime_hours: isNaN(overtimeHours) ? 0 : overtimeHours,
+      overtime_salary: isNaN(overtimeSalary) ? 0 : overtimeSalary,
+      allowance: isNaN(allowance) ? 0 : allowance,
+      insurance: isNaN(insurance) ? 0 : insurance,
+      deduction: isNaN(deduction) ? 0 : deduction,
       bonus: 0, // Can be set manually
-      total_salary: Math.round(totalSalary * 100) / 100,
+      total_salary: isNaN(totalSalary) ? 0 : Math.round(totalSalary * 100) / 100,
       status: existing?.status || SalaryStatus.PENDING,
     };
 
     if (existing) {
       Object.assign(existing, salaryData);
-      return await this.salaryRepository.save(existing);
+      const saved = await this.salaryRepository.save(existing);
+      return this.serializeSalary(saved) as any;
     } else {
       const salary = this.salaryRepository.create(salaryData);
-      return await this.salaryRepository.save(salary);
+      const saved = await this.salaryRepository.save(salary);
+      return this.serializeSalary(saved) as any;
     }
   }
 
@@ -232,12 +261,14 @@ export class SalaryCalculationService {
     attendances: Attendance[],
     workSchedule: WorkScheduleSettings,
   ): number {
-    return attendances.reduce((total, att) => {
+    const total = attendances.reduce((total, att) => {
       if (att.work_hours) {
-        return total + Number(att.work_hours);
+        const hours = Number(att.work_hours);
+        return total + (isNaN(hours) ? 0 : hours);
       }
       return total;
     }, 0);
+    return isNaN(total) ? 0 : total;
   }
 
   /**
@@ -284,24 +315,26 @@ export class SalaryCalculationService {
    */
   async getSalary(employeeId: number, year: number, month: number): Promise<EmployeeSalary | null> {
     const salaryDate = new Date(year, month - 1, 1);
-    return await this.salaryRepository.findOne({
+    const salary = await this.salaryRepository.findOne({
       where: {
         employee_id: employeeId,
         month: salaryDate,
       },
       relations: ['employee'],
     });
+    return salary ? (this.serializeSalary(salary) as any) : null;
   }
 
   /**
    * Get all salaries for an employee
    */
   async getEmployeeSalaries(employeeId: number): Promise<EmployeeSalary[]> {
-    return await this.salaryRepository.find({
+    const salaries = await this.salaryRepository.find({
       where: { employee_id: employeeId },
       relations: ['employee'],
       order: { month: 'DESC' },
     });
+    return salaries.map((salary) => this.serializeSalary(salary)) as any;
   }
 
   /**
@@ -314,7 +347,43 @@ export class SalaryCalculationService {
     }
 
     salary.status = SalaryStatus.APPROVED;
-    return await this.salaryRepository.save(salary);
+    const saved = await this.salaryRepository.save(salary);
+    return this.serializeSalary(saved) as any;
+  }
+
+  /**
+   * Approve all salaries for a specific month
+   */
+  async approveAllSalaries(year: number, month: number): Promise<{ approved: number; failed: number; errors: Array<{ id: number; error: string }> }> {
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const salaries = await this.salaryRepository.find({
+      where: {
+        month: Between(monthStart, monthEnd),
+        status: SalaryStatus.PENDING,
+      },
+    });
+
+    let approved = 0;
+    let failed = 0;
+    const errors: Array<{ id: number; error: string }> = [];
+
+    for (const salary of salaries) {
+      try {
+        salary.status = SalaryStatus.APPROVED;
+        await this.salaryRepository.save(salary);
+        approved++;
+      } catch (error: any) {
+        failed++;
+        errors.push({
+          id: salary.id,
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    return { approved, failed, errors };
   }
 
   /**
@@ -333,7 +402,8 @@ export class SalaryCalculationService {
     salary.status = SalaryStatus.PAID;
     salary.pay_date = payDate;
     salary.payment_method = paymentMethod as any;
-    return await this.salaryRepository.save(salary);
+    const saved = await this.salaryRepository.save(salary);
+    return this.serializeSalary(saved) as any;
   }
 
   /**
@@ -368,6 +438,40 @@ export class SalaryCalculationService {
   }
 
   /**
+   * Serialize EmployeeSalary to ensure numeric values are properly converted
+   */
+  private serializeSalary(salary: EmployeeSalary): any {
+    const toNumber = (value: any): number | null => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      if (typeof value === 'number') {
+        return isNaN(value) ? null : value;
+      }
+      if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? null : parsed;
+      }
+      return null;
+    };
+
+    return {
+      ...salary,
+      base_salary: toNumber(salary.base_salary),
+      work_hours: toNumber(salary.work_hours),
+      bonus: toNumber(salary.bonus),
+      allowance: toNumber(salary.allowance),
+      insurance: toNumber(salary.insurance),
+      overtime_salary: toNumber(salary.overtime_salary),
+      overtime_hours: toNumber(salary.overtime_hours),
+      work_days: toNumber(salary.work_days),
+      approved_leave_days: toNumber(salary.approved_leave_days),
+      deduction: toNumber(salary.deduction),
+      total_salary: toNumber(salary.total_salary),
+    };
+  }
+
+  /**
    * Get all salaries for a specific month
    */
   async getSalariesByMonth(year: number, month: number): Promise<EmployeeSalary[]> {
@@ -375,13 +479,15 @@ export class SalaryCalculationService {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
-    return await this.salaryRepository
+    const salaries = await this.salaryRepository
       .createQueryBuilder('salary')
       .leftJoinAndSelect('salary.employee', 'employee')
       .where('salary.month >= :monthStart', { monthStart })
       .andWhere('salary.month <= :monthEnd', { monthEnd })
       .orderBy('salary.employee_id', 'ASC')
       .getMany();
+
+    return salaries.map((salary) => this.serializeSalary(salary)) as any;
   }
 }
 

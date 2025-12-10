@@ -19,6 +19,7 @@ import { LateEarlyRequestService } from './late-early-request.service';
 import { LateEarlyRequestController } from './late-early-request.controller';
 import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryCalculationController } from './salary-calculation.controller';
+import { SalarySchedulerService } from './salary-scheduler.service';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SalaryCalculationController } from './salary-calculation.controller';
     OvertimeRequestService,
     LateEarlyRequestService,
     SalaryCalculationService,
+    SalarySchedulerService,
   ],
   controllers: [
     WorkScheduleController,

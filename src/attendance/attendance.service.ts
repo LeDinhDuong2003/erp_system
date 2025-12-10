@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Attendance } from '../database/entities/Attendance.entity';
 import { Employee } from '../database/entities/Employee.entity';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
@@ -61,7 +61,85 @@ export class AttendanceService {
     }
 
     const attendance = this.attendanceRepository.create(data);
-    return await this.attendanceRepository.save(attendance);
+    const saved = await this.attendanceRepository.save(attendance);
+    // Handle case where save might return array (shouldn't happen with single entity, but TypeScript types allow it)
+    const savedEntity = Array.isArray(saved) ? saved[0] : saved;
+    const withEmployee = await this.attendanceRepository.findOne({
+      where: { id: savedEntity.id },
+      relations: ['employee'],
+    });
+    return withEmployee ? this.serializeAttendance(withEmployee) : this.serializeAttendance(savedEntity);
+  }
+
+  private serializeAttendance(attendance: Attendance): any {
+    // Helper to safely convert Date to ISO string
+    const toISOString = (date: Date | null | undefined): string | null => {
+      if (!date) return null;
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+      // Handle string dates
+      if (typeof date === 'string') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString();
+        }
+      }
+      return null;
+    };
+
+    // Helper to safely convert Date to date string (YYYY-MM-DD)
+    // Handles both Date objects and string dates from database
+    const toDateString = (date: Date | string | null | undefined): string | null => {
+      if (!date) return null;
+      
+      // If it's already a string in YYYY-MM-DD format, return it
+      if (typeof date === 'string') {
+        // Check if it's already in YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return date;
+        }
+        // Try to parse and convert
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString().split('T')[0];
+        }
+        return null;
+      }
+      
+      // If it's a Date object
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+      
+      return null;
+    };
+
+    // Always use date field (user confirmed it always has data)
+    const dateValue = toDateString(attendance.date);
+
+    return {
+      ...attendance,
+      date: dateValue,
+      check_in: toISOString(attendance.check_in),
+      check_out: toISOString(attendance.check_out),
+      created_at: toISOString(attendance.created_at),
+      employee: attendance.employee
+        ? {
+            ...attendance.employee,
+            last_login: toISOString(attendance.employee.last_login),
+            created_at: toISOString(attendance.employee.created_at),
+            updated_at: toISOString(attendance.employee.updated_at),
+            email_verified_at: toISOString(attendance.employee.email_verified_at),
+            face_registered_at: toISOString(attendance.employee.face_registered_at),
+            email_verification_token_created_at: toISOString(
+              attendance.employee.email_verification_token_created_at,
+            ),
+            locked_until: toISOString(attendance.employee.locked_until),
+            dob: toDateString(attendance.employee.dob),
+          }
+        : null,
+    };
   }
 
   async findAll(
@@ -77,10 +155,28 @@ export class AttendanceService {
       where.employee_id = employeeId;
     }
 
+    // Normalize dates for proper date comparison (only date part, no time)
+    // With PostgreSQL date column, TypeORM compares date part only, but we normalize to be safe
     if (startDate && endDate) {
-      where.date = Between(new Date(startDate), new Date(endDate));
+      // Parse dates and normalize to start of day for comparison
+      // For date column type, PostgreSQL compares only the date part
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
+      // Add 1 day and subtract 1ms to include the entire end date
+      end.setDate(end.getDate() + 1);
+      end.setMilliseconds(end.getMilliseconds() - 1);
+      
+      // Between includes both start and end dates
+      where.date = Between(start, end);
     } else if (startDate) {
-      where.date = Between(new Date(startDate), new Date());
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      where.date = Between(start, today);
     }
 
     const [attendances, total] = await Promise.all([
@@ -95,7 +191,7 @@ export class AttendanceService {
     ]);
 
     return {
-      data: attendances,
+      data: attendances.map((attendance) => this.serializeAttendance(attendance)),
       total,
       page: Math.floor(skip / take) + 1,
       pageSize: take,
@@ -113,7 +209,7 @@ export class AttendanceService {
       throw new NotFoundException(`Attendance with ID ${id} not found`);
     }
 
-    return attendance;
+    return this.serializeAttendance(attendance);
   }
 
   async checkIn(employeeId: number) {
@@ -141,7 +237,14 @@ export class AttendanceService {
       attendance.check_in = new Date();
     }
 
-    return await this.attendanceRepository.save(attendance);
+    const saved = await this.attendanceRepository.save(attendance);
+    // Handle case where save might return array (shouldn't happen with single entity, but TypeScript types allow it)
+    const savedEntity = Array.isArray(saved) ? saved[0] : saved;
+    const withEmployee = await this.attendanceRepository.findOne({
+      where: { id: savedEntity.id },
+      relations: ['employee'],
+    });
+    return withEmployee ? this.serializeAttendance(withEmployee) : this.serializeAttendance(savedEntity);
   }
 
   async checkOut(employeeId: number) {
@@ -170,7 +273,14 @@ export class AttendanceService {
     attendance.check_out = new Date();
     attendance.work_hours = this.calculateWorkHours(attendance.check_in, attendance.check_out);
 
-    return await this.attendanceRepository.save(attendance);
+    const saved = await this.attendanceRepository.save(attendance);
+    // Handle case where save might return array (shouldn't happen with single entity, but TypeScript types allow it)
+    const savedEntity = Array.isArray(saved) ? saved[0] : saved;
+    const withEmployee = await this.attendanceRepository.findOne({
+      where: { id: savedEntity.id },
+      relations: ['employee'],
+    });
+    return withEmployee ? this.serializeAttendance(withEmployee) : this.serializeAttendance(savedEntity);
   }
 
   async update(id: number, updateAttendanceDto: UpdateAttendanceDto) {

@@ -10,7 +10,9 @@ import {
   UseGuards,
   ParseIntPipe,
   DefaultValuePipe,
+  Request,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -18,11 +20,17 @@ import { AssignRolesDto } from './dto/assign-roles.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { S3Service } from '../attendance/s3.service';
 
+@ApiTags('employees')
 @Controller('employees')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(
+    private readonly employeeService: EmployeeService,
+    private readonly s3Service: S3Service,
+  ) {}
 
   @Post()
   @UseGuards(RolesGuard)
@@ -71,6 +79,17 @@ export class EmployeeController {
     @Body() body: { role_ids: number[] },
   ) {
     return this.employeeService.removeRoles(id, body.role_ids);
+  }
+
+  @Post('avatar/presign-url')
+  @ApiOperation({ summary: 'Generate presigned URL for avatar upload' })
+  @ApiResponse({ status: 201, description: 'Presigned URL generated successfully' })
+  async generateAvatarPresignUrl(
+    @Request() req: any,
+    @Body() body: { content_type: string },
+  ) {
+    const userId = req.user.id;
+    return this.s3Service.generateAvatarUploadUrl(userId, body.content_type || 'image/jpeg');
   }
 }
 

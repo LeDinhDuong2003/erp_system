@@ -67,6 +67,7 @@ import {
 import { EpicModule } from './project-module/epic/epic.module';
 import { SprintModule } from './project-module/sprint/sprint.module';
 import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.entity';
+import { getDatabaseConfig } from './common/utils/database-url-parser';
 import { PermissionScheme, ProjectPermission, ProjectRole, ProjectRoleAssignment } from './database/entities/project-module/Permission.entity';
 import { TeamModule } from './project-module/team/team.module';
 import { ProjectPermissionModule } from './project-module/permission-system/project-permission.module';
@@ -79,8 +80,9 @@ import { StatisticsModule } from './project-module/statistics/statistics.module'
 @Module({
   imports: [
     TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
+      ...getDatabaseConfig(),
+      logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
+      logger: process.env.NODE_ENV === 'development' ? 'advanced-console' : 'simple-console',
       entities: [
         Employee,
         Role,

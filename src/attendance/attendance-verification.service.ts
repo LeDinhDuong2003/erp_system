@@ -551,16 +551,29 @@ export class AttendanceVerificationService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Use date comparison - normalize to start of day
     const attendance = await this.attendanceRepository.findOne({
-      where: { employee_id: employeeId, date: today },
+      where: { 
+        employee_id: employeeId, 
+        date: today, // TypeORM will compare date part only for date column type
+      },
     });
 
+    // Helper to safely convert Date to ISO string
+    const toISOString = (date: Date | null | undefined): string | null => {
+      if (!date) return null;
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+      return null;
+    };
+
     return {
-      date: today,
+      date: today.toISOString().split('T')[0], // Return date as YYYY-MM-DD string
       has_checked_in: !!attendance?.check_in,
       has_checked_out: !!attendance?.check_out,
-      check_in_time: attendance?.check_in,
-      check_out_time: attendance?.check_out,
+      check_in_time: toISOString(attendance?.check_in),
+      check_out_time: toISOString(attendance?.check_out),
       check_in_photo_url: attendance?.check_in_photo_url,
       check_out_photo_url: attendance?.check_out_photo_url,
       work_hours: attendance?.work_hours,
