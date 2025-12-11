@@ -11,6 +11,7 @@ import { Employee } from '../database/entities/Employee.entity';
 import { Role } from '../database/entities/Role.entity';
 import { RefreshToken } from '../database/entities/RefreshToken.entity';
 import { EmailService } from '../common/services/email.service';
+import { RedisService } from '../common/services/redis.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { EmailService } from '../common/services/email.service';
       signOptions: { expiresIn: 3600 },
     }),
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, EmailService],
+  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, EmailService, RedisService],
   controllers: [AuthController],
   exports: [AuthService],
 })

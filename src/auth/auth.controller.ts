@@ -161,6 +161,15 @@ export class AuthController {
   ) {
     return this.authService.verifyPasswordChangeOTP(req.user.id, body.otp, body.new_password);
   }
+
+  @Post('verify-login-otp')
+  @ApiOperation({ summary: 'Verify login OTP for 2FA' })
+  @ApiResponse({ status: 200, description: 'OTP verified, login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid OTP' })
+  async verifyLoginOTP(@Body() body: { username: string; otp: string }) {
+    const user = await this.authService.verifyLoginOTP(body.username, body.otp);
+    return this.authService.completeLoginAfter2FA(user);
+  }
 }
 
 

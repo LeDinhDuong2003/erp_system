@@ -76,9 +76,11 @@ import { NotificationScheme, ProjectNotification } from './database/entities/pro
 import { NotificationSeederService } from './database/seeders/project-module/notification.seeder';
 import { NotificationModule } from './project-module/notification/notification.module';
 import { StatisticsModule } from './project-module/statistics/statistics.module';
+import { RedisModule } from './common/redis.module';
 
 @Module({
   imports: [
+    RedisModule,
     TypeOrmModule.forRoot({
       ...getDatabaseConfig(),
       logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],

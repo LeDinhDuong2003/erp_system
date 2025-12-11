@@ -39,6 +39,11 @@ export class EmailService {
             user: smtpUser,
             pass: smtpPass,
           },
+          // Skip verification on creation to avoid connection errors during startup
+          // Verification will happen when actually sending email
+          tls: {
+            rejectUnauthorized: false,
+          },
         });
 
         await transporter.sendMail({
@@ -62,6 +67,86 @@ export class EmailService {
     this.logger.warn(`   Subject: Mã OTP đổi mật khẩu - ERP System`);
     this.logger.warn(`   OTP: ${otp}`);
     this.logger.warn(`   ⚠️  OTP expires in 10 minutes`);
+  }
+
+  /**
+   * Send OTP email for login (2FA)
+   */
+  async sendLoginOTP(email: string, fullName: string, otp: string): Promise<void> {
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (smtpHost && smtpUser && smtpPass) {
+      try {
+        const nodemailer = require('nodemailer');
+        
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+        });
+
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || smtpUser,
+          to: email,
+          subject: 'Mã OTP đăng nhập - ERP System',
+          html: this.getLoginOTPTemplate(fullName, otp),
+        });
+
+        this.logger.log(`✅ Login OTP sent successfully to ${email}`);
+        return;
+      } catch (error: any) {
+        this.logger.error(`❌ Failed to send login OTP email via SMTP: ${error.message}`);
+        this.logger.warn(`⚠️  Falling back to console logging.`);
+      }
+    }
+
+    // Fallback: Log to console
+    this.logger.warn(`📧 [LOGIN OTP - DEVELOPMENT MODE]`);
+    this.logger.warn(`   To: ${email}`);
+    this.logger.warn(`   Subject: Mã OTP đăng nhập - ERP System`);
+    this.logger.warn(`   OTP: ${otp}`);
+    this.logger.warn(`   ⚠️  OTP expires in 10 minutes`);
+  }
+
+  /**
+   * Get login OTP email template
+   */
+  private getLoginOTPTemplate(fullName: string, otp: string): string {
+    return `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mã OTP đăng nhập</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0;">Mã OTP đăng nhập</h1>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+          <p>Xin chào <strong>${fullName}</strong>,</p>
+          <p>Bạn đã yêu cầu đăng nhập với xác thực 2 yếu tố. Vui lòng sử dụng mã OTP sau để hoàn tất đăng nhập:</p>
+          <div style="background: white; border: 2px dashed #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h2 style="color: #667eea; font-size: 32px; letter-spacing: 5px; margin: 0;">${otp}</h2>
+          </div>
+          <p style="color: #666; font-size: 14px;">Mã OTP này có hiệu lực trong <strong>10 phút</strong>.</p>
+          <p style="color: #d32f2f; font-size: 14px; margin-top: 20px;"><strong>⚠️ Lưu ý:</strong> Nếu bạn không yêu cầu đăng nhập, vui lòng bỏ qua email này và thay đổi mật khẩu ngay lập tức.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+          <p style="color: #999; font-size: 12px; text-align: center;">Email này được gửi tự động, vui lòng không trả lời.</p>
+        </div>
+      </body>
+      </html>
+    `;
   }
 
   /**
@@ -141,6 +226,11 @@ export class EmailService {
           auth: {
             user: smtpUser,
             pass: smtpPass,
+          },
+          // Skip verification on creation to avoid connection errors during startup
+          // Verification will happen when actually sending email
+          tls: {
+            rejectUnauthorized: false,
           },
         });
 

@@ -8,6 +8,7 @@ import { EmployeeRoleAssignment } from '../database/entities/EmployeeRoleAssignm
 import { EmailService } from '../common/services/email.service';
 import { SalaryCalculationModule } from '../salary-calculation/salary-calculation.module';
 import { S3Service } from '../attendance/s3.service';
+import { RedisService } from '../common/services/redis.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { S3Service } from '../attendance/s3.service';
     forwardRef(() => SalaryCalculationModule),
   ],
   controllers: [EmployeeController],
-  providers: [EmployeeService, EmailService, S3Service],
+  providers: [EmployeeService, EmailService, S3Service, RedisService],
   exports: [EmployeeService],
 })
 export class EmployeeModule {}

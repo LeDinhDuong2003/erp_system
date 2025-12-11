@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { EmployeeService } from './employee.service';
@@ -90,6 +91,37 @@ export class EmployeeController {
   ) {
     const userId = req.user.id;
     return this.s3Service.generateAvatarUploadUrl(userId, body.content_type || 'image/jpeg');
+  }
+
+  @Post(':id/unlock')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'MANAGER')
+  @ApiOperation({ summary: 'Unlock employee account (reset failed login attempts)' })
+  @ApiResponse({ status: 200, description: 'Account unlocked successfully' })
+  unlockAccount(@Param('id', ParseIntPipe) id: number) {
+    return this.employeeService.unlockAccount(id);
+  }
+
+  @Patch(':id/two-factor')
+  @ApiOperation({ summary: 'Update two-factor authentication setting' })
+  @ApiResponse({ status: 200, description: '2FA setting updated successfully' })
+  async updateTwoFactor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { two_factor_enabled: boolean },
+    @Request() req: any,
+  ) {
+    // Only allow users to update their own 2FA setting, or admins to update any
+    const currentUserId = req.user?.id;
+    if (currentUserId !== id) {
+      // Check if user is admin
+      const isAdmin = req.user?.roles?.some((r: any) => 
+        r.code === 'SUPER_ADMIN' || r.name === 'Super Administrator'
+      );
+      if (!isAdmin) {
+        throw new BadRequestException('You can only update your own 2FA setting');
+      }
+    }
+    return this.employeeService.update(id, { two_factor_enabled: body.two_factor_enabled } as any);
   }
 }
 

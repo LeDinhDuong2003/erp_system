@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
-import { Employee } from '../database/entities/Employee.entity';
+import { Employee, EmployeeStatus } from '../database/entities/Employee.entity';
 import { Role } from '../database/entities/Role.entity';
 import { EmployeeRoleAssignment } from '../database/entities/EmployeeRoleAssignment.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -15,6 +15,7 @@ import { AssignRolesDto } from './dto/assign-roles.dto';
 import * as bcrypt from 'bcrypt';
 import { EmailService } from '../common/services/email.service';
 import { SalarySettingsService } from '../salary-calculation/salary-settings.service';
+import { RedisService } from '../common/services/redis.service';
 import { forwardRef, Inject } from '@nestjs/common';
 
 @Injectable()
@@ -29,6 +30,7 @@ export class EmployeeService {
     private readonly emailService: EmailService,
     @Inject(forwardRef(() => SalarySettingsService))
     private readonly salarySettingsService: SalarySettingsService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(createEmployeeDto: CreateEmployeeDto) {
@@ -60,12 +62,14 @@ export class EmployeeService {
     delete (data as any).password;
 
     // Generate email verification token (trừ khi admin set is_verified = true)
+    let verificationToken: string | null = null;
     if (!createEmployeeDto.is_verified) {
-      const verificationToken = this.emailService.generateVerificationToken();
-      (data as any).email_verification_token = verificationToken;
-      (data as any).email_verification_token_created_at = new Date();
+      verificationToken = this.emailService.generateVerificationToken();
       (data as any).is_verified = false;
       (data as any).email_verified_at = null;
+      // Không lưu token vào database nữa, sẽ lưu vào Redis
+      (data as any).email_verification_token = null;
+      (data as any).email_verification_token_created_at = null;
     } else {
       // Nếu admin set is_verified = true, không cần token
       (data as any).email_verification_token = null;
@@ -78,13 +82,61 @@ export class EmployeeService {
     );
     const employee: Employee = await this.employeeRepository.save(employeeEntity);
     
+    // Store verification token in Redis if needed
+    if (!createEmployeeDto.is_verified && verificationToken) {
+      const ttlSeconds = 24 * 60 * 60; // 24 hours
+      
+      try {
+        const useRedisCache = await this.redisService.isConnected();
+        
+        if (useRedisCache) {
+          // Store token in Redis with email as value
+          const key = `email:verification:${verificationToken}`;
+          await this.redisService.set(key, employee.email, ttlSeconds);
+          console.log(`[Email Verification] ✅ Token stored in Redis for ${employee.email}, TTL: ${ttlSeconds}s`);
+          
+          // Ensure database fields are null (not storing in DB anymore)
+          if (employee.email_verification_token || employee.email_verification_token_created_at) {
+            await this.employeeRepository.update(
+              { id: employee.id },
+              {
+                email_verification_token: null,
+                email_verification_token_created_at: null,
+              },
+            );
+            console.log(`[Email Verification] Cleared old token from database for ${employee.email}`);
+          }
+        } else {
+          // Fallback to database if Redis not available (with warning)
+          console.warn(`[Email Verification] ⚠️  Redis not available, falling back to database for ${employee.email}`);
+          await this.employeeRepository.update(
+            { id: employee.id },
+            {
+              email_verification_token: verificationToken,
+              email_verification_token_created_at: new Date(),
+            },
+          );
+        }
+      } catch (error) {
+        console.error(`[Email Verification] ❌ Error storing token for ${employee.email}:`, error);
+        // Fallback to database on error
+        await this.employeeRepository.update(
+          { id: employee.id },
+          {
+            email_verification_token: verificationToken,
+            email_verification_token_created_at: new Date(),
+          },
+        );
+      }
+    }
+    
     // Gửi email verification (trừ khi đã verified)
-    if (!createEmployeeDto.is_verified && employee.email_verification_token) {
+    if (!createEmployeeDto.is_verified && verificationToken) {
       try {
         await this.emailService.sendVerificationEmail(
           employee.email,
           employee.full_name,
-          employee.email_verification_token,
+          verificationToken,
         );
       } catch (error) {
         // Log error nhưng không fail việc tạo employee
@@ -235,6 +287,38 @@ export class EmployeeService {
       }
     }
     
+    const updated = await this.employeeRepository.findOne({
+      where: { id },
+      relations: ['employee_role_assignments', 'employee_role_assignments.role'],
+    });
+
+    return this.transformEmployee(updated!);
+  }
+
+  /**
+   * Unlock employee account (reset failed login count and lock status)
+   * Only admin can use this
+   */
+  async unlockAccount(id: number) {
+    const employee = await this.employeeRepository.findOne({ where: { id } });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${id} not found`);
+    }
+
+    // Reset failed login count, unlock time, and restore status to ACTIVE if it was SUSPENDED
+    const updateData: any = {
+      failed_login_count: 0,
+      locked_until: null,
+    };
+
+    // If account was permanently locked (SUSPENDED due to 10+ failed attempts), restore to ACTIVE
+    if (employee.status === EmployeeStatus.SUSPENDED && employee.failed_login_count >= 10) {
+      updateData.status = EmployeeStatus.ACTIVE;
+    }
+
+    await this.employeeRepository.update({ id }, updateData);
+
     const updated = await this.employeeRepository.findOne({
       where: { id },
       relations: ['employee_role_assignments', 'employee_role_assignments.role'],

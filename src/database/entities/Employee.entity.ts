@@ -102,6 +102,9 @@ export class Employee {
   @Column({ type: 'timestamp', nullable: true })
   locked_until!: Date | null;
 
+  @Column({ type: 'boolean', default: false, comment: 'Enable two-factor authentication' })
+  two_factor_enabled!: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   last_login!: Date | null;
 
@@ -174,12 +177,12 @@ export class Employee {
   @Column({ type: 'timestamp', nullable: true })
   face_registered_at!: Date | null;
 
-  @Column({ type: 'int', nullable: true })
-  department_id!: number | null;
+  // @Column({ type: 'int', nullable: true })
+  // department_id!: number | null;
 
-  @ManyToOne(() => Department, { nullable: true })
-  @JoinColumn({ name: 'department_id' })
-  department_relation!: Department | null; 
+  // @ManyToOne(() => Department, { nullable: true })
+  // @JoinColumn({ name: 'department_id' })
+  // department_relation!: Department | null; 
 
   @Column({ type: 'int', default: 12, comment: 'Annual leave limit in days per year' })
   annual_leave_limit!: number;
