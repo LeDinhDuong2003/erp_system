@@ -151,10 +151,20 @@ export class HrDataSeeder {
   }
 
   private async seedWorkSchedule() {
-    const existing = await this.workScheduleRepository.findOne({ where: {} });
-    if (existing) {
-      this.logger.log('Work schedule settings already exist, skipping...');
-      return;
+    try {
+      const existing = await this.workScheduleRepository.findOne({ where: {} });
+      if (existing) {
+        this.logger.log('Work schedule settings already exist, skipping...');
+        return;
+      }
+    } catch (error: any) {
+      // If table doesn't exist, log warning and skip
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        this.logger.warn('⚠️  Table work_schedule_settings does not exist. Please run migration or create table manually.');
+        this.logger.warn('   SQL script available at: create_work_schedule_settings.sql');
+        return;
+      }
+      throw error;
     }
 
     const workSchedule = this.workScheduleRepository.create({
@@ -461,9 +471,6 @@ export class HrDataSeeder {
           early_leave_minutes: earlyLeaveMinutes,
           check_in_photo_url: `https://example.com/attendance/${employee.id}/${date.toISOString()}_checkin.jpg`,
           check_out_photo_url: `https://example.com/attendance/${employee.id}/${date.toISOString()}_checkout.jpg`,
-          device_id: `device_${employee.id}`,
-          user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-          ip_address: '192.168.1.100',
           is_verified: true,
         });
         await this.attendanceRepository.save(attendance);

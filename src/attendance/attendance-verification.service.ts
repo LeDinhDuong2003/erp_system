@@ -333,12 +333,6 @@ export class AttendanceVerificationService {
           date: today,
           check_in: now,
           check_in_photo_url: dto.photo_url ?? null,
-          check_in_latitude: dto.latitude ?? null,
-          check_in_longitude: dto.longitude ?? null,
-          gps_accuracy: dto.gps_accuracy ?? null,
-          device_id: dto.device_id,
-          user_agent: userAgent,
-          ip_address: ipAddress,
           late_minutes: lateMinutes,
           is_verified: isVerified,
           verification_notes: verificationNotes.join('\n'),
@@ -347,12 +341,6 @@ export class AttendanceVerificationService {
       } else {
         attendance.check_in = now;
         attendance.check_in_photo_url = dto.photo_url ?? null;
-        attendance.check_in_latitude = dto.latitude ?? null;
-        attendance.check_in_longitude = dto.longitude ?? null;
-        attendance.gps_accuracy = dto.gps_accuracy ?? null;
-        attendance.device_id = dto.device_id;
-        attendance.user_agent = userAgent;
-        attendance.ip_address = ipAddress;
         attendance.late_minutes = lateMinutes;
         attendance.is_verified = isVerified;
         attendance.verification_notes = verificationNotes.join('\n');
@@ -399,8 +387,6 @@ export class AttendanceVerificationService {
 
       attendance.check_out = now;
       attendance.check_out_photo_url = dto.photo_url ?? null;
-      attendance.check_out_latitude = dto.latitude ?? null;
-      attendance.check_out_longitude = dto.longitude ?? null;
       attendance.work_hours = Math.round(workHours * 100) / 100;
       attendance.early_leave_minutes = earlyLeaveMinutes;
       attendance.is_verified = isVerified; // Verified nếu có photo và device
