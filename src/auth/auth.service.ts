@@ -9,10 +9,13 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { Employee, EmployeeStatus } from '../database/entities/Employee.entity';
 import { RefreshToken } from '../database/entities/RefreshToken.entity';
 import { EmailService } from '../common/services/email.service';
 import { RedisService } from '../common/services/redis.service';
+import { AUTH_EMAIL_QUEUE, AuthEmailJob } from './auth-email.processor';
 
 interface OTPData {
   otp: string;
@@ -33,6 +36,8 @@ export class AuthService {
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly emailService: EmailService,
     private readonly redisService: RedisService,
+    @InjectQueue(AUTH_EMAIL_QUEUE)
+    private readonly authEmailQueue: Queue<AuthEmailJob>,
   ) {
     // Cleanup expired OTPs every 5 minutes (only for in-memory fallback)
     setInterval(() => {
@@ -222,8 +227,13 @@ export class AuthService {
         this.loginOTPs.set(employee.username, { otp, expiresAt });
       }
       
-      // Send OTP email
-      await this.emailService.sendLoginOTP(employee.email, employee.full_name, otp);
+      // Send OTP email via queue
+      await this.authEmailQueue.add('send-login-otp', {
+        type: 'login-otp',
+        email: employee.email,
+        fullName: employee.full_name,
+        data: { otp },
+      });
       
       // Return indication that OTP is required
       return {
@@ -483,47 +493,9 @@ export class AuthService {
       // Delete token after successful verification
       await this.redisService.delete(key);
     } else {
-      // Fallback to database (legacy support)
-      const employee = await this.employeeRepository.findOne({
-        where: { email_verification_token: token },
-      });
-
-      if (!employee) {
-        throw new BadRequestException('Invalid or expired verification token');
-      }
-
-      if (employee.is_verified) {
-        throw new BadRequestException('Email already verified');
-      }
-
-      // Check token expiry (24 hours)
-      if (employee.email_verification_token_created_at) {
-        const tokenAge = Date.now() - new Date(employee.email_verification_token_created_at).getTime();
-        const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
-        if (tokenAge > twentyFourHours) {
-          // Clear expired token
-          await this.employeeRepository.update(
-            { id: employee.id },
-            {
-              email_verification_token: null,
-              email_verification_token_created_at: null,
-            },
-          );
-          throw new BadRequestException('Verification token has expired. Please request a new verification email.');
-        }
-      }
-
-      email = employee.email;
-      
-      // Clear token from database
-      await this.employeeRepository.update(
-        { id: employee.id },
-        {
-          email_verification_token: null,
-          email_verification_token_created_at: null,
-        },
-      );
+      // Fallback: Redis not available - token should be in Redis
+      // If Redis is down, we cannot verify tokens
+      throw new BadRequestException('Verification service temporarily unavailable. Please try again later.');
     }
 
     // Find employee by email and update verification status
@@ -579,47 +551,23 @@ export class AuthService {
         const key = this.getEmailVerificationTokenKey(verificationToken);
         await this.redisService.set(key, email, ttlSeconds);
         console.log(`[Email Verification] ✅ Token stored in Redis for ${email}, TTL: ${ttlSeconds}s`);
-        
-        // Clear old token from database if exists (for migration)
-        if (employee.email_verification_token) {
-          await this.employeeRepository.update(
-            { id: employee.id },
-            {
-              email_verification_token: null,
-              email_verification_token_created_at: null,
-            },
-          );
-          console.log(`[Email Verification] Cleared old token from database for ${email}`);
-        }
       } else {
-        // Fallback to database if Redis not available (with warning)
-        console.warn(`[Email Verification] ⚠️  Redis not available, falling back to database for ${email}`);
-        await this.employeeRepository.update(
-          { id: employee.id },
-          {
-            email_verification_token: verificationToken,
-            email_verification_token_created_at: new Date(),
-          },
-        );
+        // Fallback: Redis not available - cannot store token
+        console.warn(`[Email Verification] ⚠️  Redis not available, cannot store token for ${email}`);
+        throw new BadRequestException('Verification service temporarily unavailable. Please try again later.');
       }
     } catch (error) {
       console.error(`[Email Verification] ❌ Error storing token for ${email}:`, error);
-      // Fallback to database on error
-      await this.employeeRepository.update(
-        { id: employee.id },
-        {
-          email_verification_token: verificationToken,
-          email_verification_token_created_at: new Date(),
-        },
-      );
+      throw new BadRequestException('Failed to generate verification token. Please try again later.');
     }
 
-    // Send email
-    await this.emailService.sendVerificationEmail(
-      employee.email,
-      employee.full_name,
-      verificationToken,
-    );
+    // Send email via queue
+    await this.authEmailQueue.add('send-verification-email', {
+      type: 'verification',
+      email: employee.email,
+      fullName: employee.full_name,
+      data: { token: verificationToken },
+    });
 
     return {
       message: 'Verification email sent successfully',

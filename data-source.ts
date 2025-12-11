@@ -8,7 +8,6 @@ import { Role } from './src/database/entities/Role.entity';
 import { Permission } from './src/database/entities/Permission.entity';
 import { EmployeeRoleAssignment } from './src/database/entities/EmployeeRoleAssignment.entity';
 import { RolePermission } from './src/database/entities/RolePermission.entity';
-import { PasswordResetToken } from './src/database/entities/PasswordResetToken.entity';
 import { RefreshToken } from './src/database/entities/RefreshToken.entity';
 import { AuditLog } from './src/database/entities/AuditLog.entity';
 
@@ -62,6 +61,22 @@ import { File } from './src/database/entities/File.entity';
 import { Report } from './src/database/entities/Report.entity';
 import { EmployeeDevice } from './src/database/entities/EmployeeDevice.entity';
 import { AttendanceChallenge } from './src/database/entities/AttendanceChallenge.entity';
+import { WorkScheduleSettings } from './src/database/entities/WorkScheduleSettings.entity';
+import { SalarySettings } from './src/database/entities/SalarySettings.entity';
+import { OvertimeRequest } from './src/database/entities/OvertimeRequest.entity';
+import { LateEarlyRequest } from './src/database/entities/LateEarlyRequest.entity';
+
+// Asset Management entities
+import { Asset } from './src/database/assetmanagement/asset.entity';
+import { Category } from './src/database/assetmanagement/category.entity';
+
+// Asset Handover entities
+import { Assignment } from './src/database/assethandover/assignment.entity';
+
+// Asset Request entities
+import { Request } from './src/database/assetrequest/request.entity';
+import { Notification } from './src/database/assetrequest/notification.entity';
+import { Supplier } from './src/database/assetrequest/supplier.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -73,7 +88,6 @@ export const AppDataSource = new DataSource({
     Permission,
     EmployeeRoleAssignment,
     RolePermission,
-    PasswordResetToken,
     RefreshToken,
     AuditLog,
     
@@ -117,6 +131,22 @@ export const AppDataSource = new DataSource({
     Report,
     EmployeeDevice,
     AttendanceChallenge,
+    WorkScheduleSettings,
+    SalarySettings,
+    OvertimeRequest,
+    LateEarlyRequest,
+    
+    // Asset Management
+    Asset,
+    Category,
+    
+    // Asset Handover
+    Assignment,
+    
+    // Asset Request
+    Request,
+    Notification,
+    Supplier,
   ],
   migrations: ['src/migration/**/*.ts'],
   synchronize: false,

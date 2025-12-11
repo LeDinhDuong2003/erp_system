@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { EmployeeSalary, SalaryStatus } from '../database/entities/EmployeeSalary.entity';
 import { Employee } from '../database/entities/Employee.entity';
 import { Attendance } from '../database/entities/Attendance.entity';
@@ -12,6 +14,7 @@ import { SalarySettings } from '../database/entities/SalarySettings.entity';
 import { WorkScheduleService } from './work-schedule.service';
 import { SalarySettingsService } from './salary-settings.service';
 import { EmployeeStatus } from '../database/entities/Employee.entity';
+import { SALARY_CALCULATION_QUEUE, SalaryCalculationJob } from './salary-calculation.processor';
 
 @Injectable()
 export class SalaryCalculationService {
@@ -30,6 +33,8 @@ export class SalaryCalculationService {
     private readonly lateEarlyRepository: Repository<LateEarlyRequest>,
     private readonly workScheduleService: WorkScheduleService,
     private readonly salarySettingsService: SalarySettingsService,
+    @InjectQueue(SALARY_CALCULATION_QUEUE)
+    private readonly salaryQueue: Queue<SalaryCalculationJob>,
   ) {}
 
   /**
@@ -488,6 +493,46 @@ export class SalaryCalculationService {
       .getMany();
 
     return salaries.map((salary) => this.serializeSalary(salary)) as any;
+  }
+
+  /**
+   * Queue salary calculation for a single employee
+   */
+  async queueCalculateSalary(
+    employeeId: number,
+    year: number,
+    month: number,
+  ): Promise<{ message: string; jobId: string }> {
+    const job = await this.salaryQueue.add('calculate-single-salary', {
+      type: 'single',
+      employeeId,
+      year,
+      month,
+    });
+
+    return {
+      message: 'Salary calculation job queued successfully',
+      jobId: job.id?.toString() || 'unknown',
+    };
+  }
+
+  /**
+   * Queue salary calculation for all employees
+   */
+  async queueCalculateAllEmployees(
+    year: number,
+    month: number,
+  ): Promise<{ message: string; jobId: string }> {
+    const job = await this.salaryQueue.add('calculate-all-salaries', {
+      type: 'all',
+      year,
+      month,
+    });
+
+    return {
+      message: 'Salary calculation job for all employees queued successfully',
+      jobId: job.id?.toString() || 'unknown',
+    };
   }
 }
 

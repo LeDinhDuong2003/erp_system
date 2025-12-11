@@ -132,9 +132,6 @@ export class AttendanceService {
             updated_at: toISOString(attendance.employee.updated_at),
             email_verified_at: toISOString(attendance.employee.email_verified_at),
             face_registered_at: toISOString(attendance.employee.face_registered_at),
-            email_verification_token_created_at: toISOString(
-              attendance.employee.email_verification_token_created_at,
-            ),
             locked_until: toISOString(attendance.employee.locked_until),
             dob: toDateString(attendance.employee.dob),
           }

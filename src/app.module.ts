@@ -25,7 +25,6 @@ import { Permission } from './database/entities/Permission.entity';
 import { EmployeeRoleAssignment } from './database/entities/EmployeeRoleAssignment.entity';
 import { RolePermission } from './database/entities/RolePermission.entity';
 import { RefreshToken } from './database/entities/RefreshToken.entity';
-import { PasswordResetToken } from './database/entities/PasswordResetToken.entity';
 import { AuditLog } from './database/entities/AuditLog.entity';
 import { Project } from './database/entities/project-module/Project.entity';
 import { Epic, Issue, IssueChangeHistory, IssueComment, IssueLink, IssueType } from './database/entities/project-module/Issue.entity';
@@ -77,10 +76,19 @@ import { NotificationSeederService } from './database/seeders/project-module/not
 import { NotificationModule } from './project-module/notification/notification.module';
 import { StatisticsModule } from './project-module/statistics/statistics.module';
 import { RedisModule } from './common/redis.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
     RedisModule,
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: parseInt(process.env.REDIS_DB || '0', 10),
+      },
+    }),
     TypeOrmModule.forRoot({
       ...getDatabaseConfig(),
       logging: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
@@ -92,7 +100,6 @@ import { RedisModule } from './common/redis.module';
         EmployeeRoleAssignment,
         RolePermission,
         RefreshToken,
-        PasswordResetToken,
         AuditLog,
         Project,
         Issue,
@@ -146,7 +153,6 @@ import { RedisModule } from './common/redis.module';
       EmployeeRoleAssignment,
       RolePermission,
       RefreshToken,
-      PasswordResetToken,
       AuditLog,
       Project,
       Issue,

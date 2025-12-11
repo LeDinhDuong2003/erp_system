@@ -25,13 +25,13 @@ export class SalaryCalculationController {
 
   @Post('calculate/:employeeId')
   @Roles('SUPER_ADMIN', 'MANAGER')
-  @ApiOperation({ summary: 'Calculate salary for an employee (Admin/Manager only)' })
-  @ApiResponse({ status: 201, description: 'Salary calculated successfully' })
+  @ApiOperation({ summary: 'Calculate salary for an employee (Admin/Manager only) - Queued' })
+  @ApiResponse({ status: 201, description: 'Salary calculation job queued successfully' })
   async calculate(
     @Param('employeeId', ParseIntPipe) employeeId: number,
     @Body() body: { year: number; month: number },
   ) {
-    return this.salaryCalculationService.calculateSalary(employeeId, body.year, body.month);
+    return this.salaryCalculationService.queueCalculateSalary(employeeId, body.year, body.month);
   }
 
   @Get('employee/:employeeId')
@@ -85,10 +85,10 @@ export class SalaryCalculationController {
 
   @Post('calculate-all')
   @Roles('SUPER_ADMIN', 'MANAGER')
-  @ApiOperation({ summary: 'Calculate salary for all employees (Admin/Manager only)' })
-  @ApiResponse({ status: 201, description: 'Salaries calculated successfully' })
+  @ApiOperation({ summary: 'Calculate salary for all employees (Admin/Manager only) - Queued' })
+  @ApiResponse({ status: 201, description: 'Salary calculation job queued successfully' })
   async calculateAll(@Body() body: { year: number; month: number }) {
-    return this.salaryCalculationService.calculateAllEmployees(body.year, body.month);
+    return this.salaryCalculationService.queueCalculateAllEmployees(body.year, body.month);
   }
 
   @Get('month')

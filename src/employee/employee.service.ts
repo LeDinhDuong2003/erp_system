@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { Employee, EmployeeStatus } from '../database/entities/Employee.entity';
 import { Role } from '../database/entities/Role.entity';
 import { EmployeeRoleAssignment } from '../database/entities/EmployeeRoleAssignment.entity';
@@ -17,6 +19,7 @@ import { EmailService } from '../common/services/email.service';
 import { SalarySettingsService } from '../salary-calculation/salary-settings.service';
 import { RedisService } from '../common/services/redis.service';
 import { forwardRef, Inject } from '@nestjs/common';
+import { AUTH_EMAIL_QUEUE, AuthEmailJob } from '../auth/auth-email.processor';
 
 @Injectable()
 export class EmployeeService {
@@ -31,6 +34,8 @@ export class EmployeeService {
     @Inject(forwardRef(() => SalarySettingsService))
     private readonly salarySettingsService: SalarySettingsService,
     private readonly redisService: RedisService,
+    @InjectQueue(AUTH_EMAIL_QUEUE)
+    private readonly authEmailQueue: Queue<AuthEmailJob>,
   ) {}
 
   async create(createEmployeeDto: CreateEmployeeDto) {
@@ -94,53 +99,29 @@ export class EmployeeService {
           const key = `email:verification:${verificationToken}`;
           await this.redisService.set(key, employee.email, ttlSeconds);
           console.log(`[Email Verification] ✅ Token stored in Redis for ${employee.email}, TTL: ${ttlSeconds}s`);
-          
-          // Ensure database fields are null (not storing in DB anymore)
-          if (employee.email_verification_token || employee.email_verification_token_created_at) {
-            await this.employeeRepository.update(
-              { id: employee.id },
-              {
-                email_verification_token: null,
-                email_verification_token_created_at: null,
-              },
-            );
-            console.log(`[Email Verification] Cleared old token from database for ${employee.email}`);
-          }
         } else {
-          // Fallback to database if Redis not available (with warning)
-          console.warn(`[Email Verification] ⚠️  Redis not available, falling back to database for ${employee.email}`);
-          await this.employeeRepository.update(
-            { id: employee.id },
-            {
-              email_verification_token: verificationToken,
-              email_verification_token_created_at: new Date(),
-            },
-          );
+          // Fallback: Redis not available - cannot store token
+          console.warn(`[Email Verification] ⚠️  Redis not available, cannot store token for ${employee.email}`);
+          // Continue without storing token - email will still be sent but verification won't work
         }
       } catch (error) {
         console.error(`[Email Verification] ❌ Error storing token for ${employee.email}:`, error);
-        // Fallback to database on error
-        await this.employeeRepository.update(
-          { id: employee.id },
-          {
-            email_verification_token: verificationToken,
-            email_verification_token_created_at: new Date(),
-          },
-        );
+        // Continue without storing token - email will still be sent but verification won't work
       }
     }
     
-    // Gửi email verification (trừ khi đã verified)
+    // Gửi email verification (trừ khi đã verified) via queue
     if (!createEmployeeDto.is_verified && verificationToken) {
       try {
-        await this.emailService.sendVerificationEmail(
-          employee.email,
-          employee.full_name,
-          verificationToken,
-        );
+        await this.authEmailQueue.add('send-verification-email', {
+          type: 'verification',
+          email: employee.email,
+          fullName: employee.full_name,
+          data: { token: verificationToken },
+        });
       } catch (error) {
         // Log error nhưng không fail việc tạo employee
-        console.error('Failed to send verification email:', error);
+        console.error('Failed to queue verification email:', error);
       }
     }
 

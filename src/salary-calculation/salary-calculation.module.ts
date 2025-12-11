@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { WorkScheduleSettings } from '../database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from '../database/entities/SalarySettings.entity';
 import { OvertimeRequest } from '../database/entities/OvertimeRequest.entity';
@@ -20,6 +21,7 @@ import { LateEarlyRequestController } from './late-early-request.controller';
 import { SalaryCalculationService } from './salary-calculation.service';
 import { SalaryCalculationController } from './salary-calculation.controller';
 import { SalarySchedulerService } from './salary-scheduler.service';
+import { SalaryCalculationProcessor, SALARY_CALCULATION_QUEUE } from './salary-calculation.processor';
 
 @Module({
   imports: [
@@ -34,14 +36,27 @@ import { SalarySchedulerService } from './salary-scheduler.service';
       Employee,
       Role,
     ]),
+    BullModule.registerQueue({
+      name: SALARY_CALCULATION_QUEUE,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    }),
   ],
   providers: [
     WorkScheduleService,
     SalarySettingsService,
     OvertimeRequestService,
     LateEarlyRequestService,
-    SalaryCalculationService,
+    SalaryCalculationService, // Must be before SalaryCalculationProcessor
     SalarySchedulerService,
+    SalaryCalculationProcessor,
   ],
   controllers: [
     WorkScheduleController,

@@ -1,6 +1,5 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, JoinColumn, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { EmployeeRoleAssignment } from './EmployeeRoleAssignment.entity';
-import { PasswordResetToken } from './PasswordResetToken.entity';
 import { RefreshToken } from './RefreshToken.entity';
 import { AuditLog } from './AuditLog.entity';
 import { ProjectRoleAssignment } from './project-module/Permission.entity';
@@ -117,9 +116,6 @@ export class Employee {
   @OneToMany(() => EmployeeRoleAssignment, (era) => era.employee)
   employee_role_assignments!: EmployeeRoleAssignment[];
 
-  @OneToMany(() => PasswordResetToken, (prt) => prt.employee)
-  password_reset_tokens!: PasswordResetToken[];
-
   @OneToMany(() => RefreshToken, (rt) => rt.employee)
   refresh_tokens!: RefreshToken[];
 
@@ -189,12 +185,6 @@ export class Employee {
 
   @Column({ type: 'int', default: 12, comment: 'Remaining annual leave days for current year' })
   remaining_leave_days!: number;
-
-  @Column({ type: 'varchar', length: 255, nullable: true, comment: 'Email verification token' })
-  email_verification_token!: string | null;
-
-  @Column({ type: 'timestamptz', nullable: true, comment: 'Timestamp when email verification token was created' })
-  email_verification_token_created_at!: Date | null;
 
   @Column({ type: 'timestamp', nullable: true, comment: 'Email verified timestamp' })
   email_verified_at!: Date | null;
