@@ -6,9 +6,7 @@ import type { Queue } from 'bull';
 import { EmployeeSalary, SalaryStatus } from '../database/entities/EmployeeSalary.entity';
 import { Employee } from '../database/entities/Employee.entity';
 import { Attendance } from '../database/entities/Attendance.entity';
-import { LeaveRequest, LeaveStatus } from '../database/entities/LeaveRequest.entity';
-import { OvertimeRequest, OvertimeStatus } from '../database/entities/OvertimeRequest.entity';
-import { LateEarlyRequest, LateEarlyStatus } from '../database/entities/LateEarlyRequest.entity';
+import { HrRequest, HrRequestType, HrRequestStatus, LeaveType } from '../database/entities/HrRequest.entity';
 import { WorkScheduleSettings } from '../database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from '../database/entities/SalarySettings.entity';
 import { WorkScheduleService } from './work-schedule.service';
@@ -25,12 +23,8 @@ export class SalaryCalculationService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(Attendance)
     private readonly attendanceRepository: Repository<Attendance>,
-    @InjectRepository(LeaveRequest)
-    private readonly leaveRequestRepository: Repository<LeaveRequest>,
-    @InjectRepository(OvertimeRequest)
-    private readonly overtimeRepository: Repository<OvertimeRequest>,
-    @InjectRepository(LateEarlyRequest)
-    private readonly lateEarlyRepository: Repository<LateEarlyRequest>,
+    @InjectRepository(HrRequest)
+    private readonly hrRequestRepository: Repository<HrRequest>,
     private readonly workScheduleService: WorkScheduleService,
     private readonly salarySettingsService: SalarySettingsService,
     @InjectQueue(SALARY_CALCULATION_QUEUE)
@@ -92,29 +86,32 @@ export class SalaryCalculationService {
     });
 
     // Get approved leave requests
-    const approvedLeaves = await this.leaveRequestRepository.find({
+    const approvedLeaves = await this.hrRequestRepository.find({
       where: {
         employee_id: employeeId,
-        status: LeaveStatus.APPROVED,
+        request_type: HrRequestType.LEAVE,
+        status: HrRequestStatus.APPROVED,
         start_date: Between(startDate, endDate),
       },
     });
 
     // Get approved overtime requests
-    const approvedOvertimes = await this.overtimeRepository.find({
+    const approvedOvertimes = await this.hrRequestRepository.find({
       where: {
         employee_id: employeeId,
-        status: OvertimeStatus.APPROVED,
-        date: Between(startDate, endDate),
+        request_type: HrRequestType.OVERTIME,
+        status: HrRequestStatus.APPROVED,
+        overtime_date: Between(startDate, endDate),
       },
     });
 
     // Get approved late/early requests
-    const approvedLateEarly = await this.lateEarlyRepository.find({
+    const approvedLateEarly = await this.hrRequestRepository.find({
       where: {
         employee_id: employeeId,
-        status: LateEarlyStatus.APPROVED,
-        date: Between(startDate, endDate),
+        request_type: HrRequestType.LATE_EARLY,
+        status: HrRequestStatus.APPROVED,
+        late_early_date: Between(startDate, endDate),
       },
     });
 
@@ -131,7 +128,7 @@ export class SalaryCalculationService {
 
     // Calculate overtime hours (only approved)
     const overtimeHours = approvedOvertimes.reduce(
-      (total, ot) => total + (Number(ot.hours) || 0),
+      (total, ot) => total + (Number(ot.overtime_hours) || 0),
       0,
     );
 
@@ -233,7 +230,7 @@ export class SalaryCalculationService {
     startDate: Date,
     endDate: Date,
     workSchedule: WorkScheduleSettings,
-    approvedLeaves: LeaveRequest[],
+    approvedLeaves: HrRequest[],
   ): number {
     let workDays = 0;
     const currentDate = new Date(startDate);
@@ -243,9 +240,12 @@ export class SalaryCalculationService {
       if (this.workScheduleService.isWorkingDay(currentDate, workSchedule)) {
         // Check if it's in an approved leave
         const isOnLeave = approvedLeaves.some((leave) => {
-          const leaveStart = new Date(leave.start_date);
-          const leaveEnd = new Date(leave.end_date);
-          return currentDate >= leaveStart && currentDate <= leaveEnd;
+          if (leave.start_date && leave.end_date) {
+            const leaveStart = new Date(leave.start_date);
+            const leaveEnd = new Date(leave.end_date);
+            return currentDate >= leaveStart && currentDate <= leaveEnd;
+          }
+          return false;
         });
 
         if (!isOnLeave) {
@@ -281,7 +281,7 @@ export class SalaryCalculationService {
    */
   private calculateDeductions(
     attendances: Attendance[],
-    approvedLateEarly: LateEarlyRequest[],
+    approvedLateEarly: HrRequest[],
     workSchedule: WorkScheduleSettings,
     hourlyRate: number,
   ): number {
@@ -289,9 +289,12 @@ export class SalaryCalculationService {
 
     for (const att of attendances) {
       // Check if there's an approved late/early request for this date
-      const hasApprovedRequest = approvedLateEarly.some(
-        (req) => new Date(req.date).toDateString() === new Date(att.date).toDateString(),
-      );
+      const hasApprovedRequest = approvedLateEarly.some((req) => {
+        if (req.late_early_date) {
+          return new Date(req.late_early_date).toDateString() === new Date(att.date).toDateString();
+        }
+        return false;
+      });
 
       if (!hasApprovedRequest) {
         // Calculate late minutes penalty

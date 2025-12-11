@@ -50,14 +50,16 @@ export class PositionController {
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 10 })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by title or description' })
+  @ApiQuery({ name: 'departmentId', required: false, type: Number, description: 'Filter by department ID' })
   @ApiResponse({ status: 200, description: 'List of positions' })
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('search') search?: string,
+    @Query('departmentId', new ParseIntPipe({ optional: true })) departmentId?: number,
   ) {
     const skip = (page - 1) * pageSize;
-    return this.positionService.findAll(skip, pageSize, search);
+    return this.positionService.findAll(skip, pageSize, search, departmentId);
   }
 
   @Get(':id')

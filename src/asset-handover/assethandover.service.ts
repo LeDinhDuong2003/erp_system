@@ -38,7 +38,9 @@ export class AssetHandoverService {
       .leftJoinAndSelect('a.asset', 'asset')
       .leftJoinAndSelect('asset.category', 'category')
       .leftJoinAndSelect('a.employee', 'employee')
-      .leftJoinAndSelect('employee.department_relation', 'department') // ← JOIN DEPARTMENT
+      .leftJoinAndSelect('employee.employee_positions', 'employee_positions')
+      .leftJoinAndSelect('employee_positions.department', 'ep_department')
+      .leftJoinAndSelect('employee_positions.position', 'ep_position')
       .leftJoinAndSelect('a.assigned_by', 'assigned_by')
       .leftJoinAndSelect('a.returned_by', 'returned_by');
 
@@ -51,9 +53,10 @@ export class AssetHandoverService {
     if (employeeId) {
       qb.andWhere('employee.id = :employeeId', { employeeId });
     }
-    // ✅ LỌC THEO PHÒNG BAN
+    // ✅ LỌC THEO PHÒNG BAN - filter by employee_positions
     if (departmentId) {
-      qb.andWhere('employee.department_id = :departmentId', { departmentId });
+      qb.andWhere('employee_positions.department_id = :departmentId', { departmentId });
+      qb.andWhere('employee_positions.is_current = :isCurrent', { isCurrent: true });
     }
     if (status) {
       qb.andWhere('a.status = :status', { status });
@@ -76,7 +79,16 @@ export class AssetHandoverService {
   async findOne(id: number) {
     const assignment = await this.assignmentRepository.findOne({
       where: { id },
-      relations: ['asset', 'asset.category', 'employee', 'employee.department_relation', 'assigned_by', 'returned_by'],
+      relations: [
+        'asset', 
+        'asset.category', 
+        'employee', 
+        'employee.employee_positions',
+        'employee.employee_positions.department',
+        'employee.employee_positions.position',
+        'assigned_by', 
+        'returned_by'
+      ],
     });
     if (!assignment) throw new NotFoundException('Assignment not found');
     return assignment;

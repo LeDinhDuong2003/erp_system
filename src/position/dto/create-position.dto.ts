@@ -32,5 +32,14 @@ export class CreatePositionDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @ApiProperty({
+    description: 'Department ID',
+    example: 1,
+    required: false,
+  })
+  @IsInt()
+  @IsOptional()
+  department_id?: number;
 }
 

@@ -13,7 +13,7 @@ import { DepartmentModule } from './department/department.module';
 import { EmployeePositionModule } from './employee-position/employee-position.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { EmployeeSalaryModule } from './employee-salary/employee-salary.module';
-import { LeaveRequestModule } from './leave-request/leave-request.module';
+import { HrRequestModule } from './hr-request/hr-request.module';
 import { SalaryCalculationModule } from './salary-calculation/salary-calculation.module';
 import { FileModule } from './file/file.module';
 import { ReportModule } from './report/report.module';
@@ -33,15 +33,13 @@ import { Department } from './database/entities/Department.entity';
 import { EmployeePosition } from './database/entities/EmployeePosition.entity';
 import { Attendance } from './database/entities/Attendance.entity';
 import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
-import { LeaveRequest } from './database/entities/LeaveRequest.entity';
 import { File } from './database/entities/File.entity';
 import { Report } from './database/entities/Report.entity';
 import { EmployeeDevice } from './database/entities/EmployeeDevice.entity';
 import { AttendanceChallenge } from './database/entities/AttendanceChallenge.entity';
 import { WorkScheduleSettings } from './database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from './database/entities/SalarySettings.entity';
-import { OvertimeRequest } from './database/entities/OvertimeRequest.entity';
-import { LateEarlyRequest } from './database/entities/LateEarlyRequest.entity';
+import { HrRequest } from './database/entities/HrRequest.entity';
 import { AssetManagementModule } from './asset-management/asset-management.module';
 import { Asset } from './database/assetmanagement/asset.entity';
 import { Category } from './database/assetmanagement/category.entity';
@@ -125,7 +123,6 @@ import { BullModule } from '@nestjs/bull';
         EmployeePosition,
         Attendance,
         EmployeeSalary,
-        LeaveRequest,
         File,
         Report,
         EmployeeDevice,
@@ -138,8 +135,7 @@ import { BullModule } from '@nestjs/bull';
         Supplier,
         WorkScheduleSettings,
         SalarySettings,
-        OvertimeRequest,
-        LateEarlyRequest,
+        HrRequest,
       ],
       synchronize: false,
       schema: 'public',
@@ -178,7 +174,6 @@ import { BullModule } from '@nestjs/bull';
       EmployeePosition,
       Attendance,
       EmployeeSalary,
-      LeaveRequest,
       File,
       Report,
         EmployeeDevice,
@@ -188,8 +183,7 @@ import { BullModule } from '@nestjs/bull';
       Assignment,
       WorkScheduleSettings,
       SalarySettings,
-      OvertimeRequest,
-      LateEarlyRequest,
+      HrRequest,
     ]),
     ProjectModule,
     StatisticsModule,
@@ -208,7 +202,7 @@ import { BullModule } from '@nestjs/bull';
     EmployeePositionModule,
     AttendanceModule,
     EmployeeSalaryModule,
-    LeaveRequestModule,
+    HrRequestModule,
     FileModule,
     ReportModule,
     TeamModule,

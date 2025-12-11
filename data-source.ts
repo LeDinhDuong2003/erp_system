@@ -56,15 +56,13 @@ import { Department } from './src/database/entities/Department.entity';
 import { EmployeePosition } from './src/database/entities/EmployeePosition.entity';
 import { Attendance } from './src/database/entities/Attendance.entity';
 import { EmployeeSalary } from './src/database/entities/EmployeeSalary.entity';
-import { LeaveRequest } from './src/database/entities/LeaveRequest.entity';
 import { File } from './src/database/entities/File.entity';
 import { Report } from './src/database/entities/Report.entity';
 import { EmployeeDevice } from './src/database/entities/EmployeeDevice.entity';
 import { AttendanceChallenge } from './src/database/entities/AttendanceChallenge.entity';
 import { WorkScheduleSettings } from './src/database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from './src/database/entities/SalarySettings.entity';
-import { OvertimeRequest } from './src/database/entities/OvertimeRequest.entity';
-import { LateEarlyRequest } from './src/database/entities/LateEarlyRequest.entity';
+import { HrRequest } from './src/database/entities/HrRequest.entity';
 
 // Asset Management entities
 import { Asset } from './src/database/assetmanagement/asset.entity';
@@ -126,15 +124,13 @@ export const AppDataSource = new DataSource({
     EmployeePosition,
     Attendance,
     EmployeeSalary,
-    LeaveRequest,
     File,
     Report,
     EmployeeDevice,
     AttendanceChallenge,
     WorkScheduleSettings,
     SalarySettings,
-    OvertimeRequest,
-    LateEarlyRequest,
+    HrRequest,
     
     // Asset Management
     Asset,

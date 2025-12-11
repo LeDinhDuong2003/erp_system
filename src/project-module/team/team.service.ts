@@ -117,35 +117,50 @@ export class TeamService {
 
         const members = await this.roleAssignmentRepository.find({
             where: { project_id: projectId },
-            relations: ['employee', 'project_role', 'assigned_by_employee'],
+            relations: [
+                'employee', 
+                'employee.employee_positions',
+                'employee.employee_positions.department',
+                'employee.employee_positions.position',
+                'project_role', 
+                'assigned_by_employee'
+            ],
             order: { assigned_at: 'DESC' },
         });
 
-        return members.map((member) => ({
-            employee_id: member.employee_id,
-            employee: {
-                id: member.employee.id,
-                username: member.employee.username,
-                email: member.employee.email,
-                full_name: member.employee.full_name,
-                first_name: member.employee.first_name,
-                last_name: member.employee.last_name,
-                avatar_url: member.employee.avatar_url,
-                status: member.employee.status,
-            },
-            project_role: {
-                id: member.project_role.id,
-                role_name: member.project_role.role_name,
-                role_description: member.project_role.role_description,
-            },
-            assigned_by: member.assigned_by_employee
-                ? {
-                      id: member.assigned_by_employee.id,
-                      full_name: member.assigned_by_employee.full_name,
-                  }
-                : null,
-            assigned_at: member.assigned_at,
-        }));
+        return members.map((member) => {
+            // Get current positions
+            const currentPositions = member.employee.employee_positions?.filter(ep => ep.is_current) || [];
+            const primaryPosition = currentPositions[0] || null;
+
+            return {
+                employee_id: member.employee_id,
+                employee: {
+                    id: member.employee.id,
+                    username: member.employee.username,
+                    email: member.employee.email,
+                    full_name: member.employee.full_name,
+                    first_name: member.employee.first_name,
+                    last_name: member.employee.last_name,
+                    avatar_url: member.employee.avatar_url,
+                    department: primaryPosition?.department?.name || null,
+                    position: primaryPosition?.position?.title || null,
+                    status: member.employee.status,
+                },
+                project_role: {
+                    id: member.project_role.id,
+                    role_name: member.project_role.role_name,
+                    role_description: member.project_role.role_description,
+                },
+                assigned_by: member.assigned_by_employee
+                    ? {
+                          id: member.assigned_by_employee.id,
+                          full_name: member.assigned_by_employee.full_name,
+                      }
+                    : null,
+                assigned_at: member.assigned_at,
+            };
+        });
     }
 
     /**
@@ -157,7 +172,14 @@ export class TeamService {
                 project_id: projectId,
                 employee_id: employeeId,
             },
-            relations: ['employee', 'project_role', 'assigned_by_employee'],
+            relations: [
+                'employee', 
+                'employee.employee_positions',
+                'employee.employee_positions.department',
+                'employee.employee_positions.position',
+                'project_role', 
+                'assigned_by_employee'
+            ],
         });
 
         if (!member) {
@@ -165,6 +187,10 @@ export class TeamService {
                 `Employee ${employeeId} is not a member of project ${projectId}`,
             );
         }
+
+        // Get current positions
+        const currentPositions = member.employee.employee_positions?.filter(ep => ep.is_current) || [];
+        const primaryPosition = currentPositions[0] || null;
 
         return {
             employee_id: member.employee_id,
@@ -177,8 +203,8 @@ export class TeamService {
                 last_name: member.employee.last_name,
                 avatar_url: member.employee.avatar_url,
                 phone: member.employee.phone,
-                department: member.employee.department,
-                position: member.employee.position,
+                department: primaryPosition?.department?.name || null,
+                position: primaryPosition?.position?.title || null,
                 status: member.employee.status,
             },
             project_role: {
@@ -768,7 +794,10 @@ export class TeamService {
         const memberIds = members.map((m) => m.employee_id);
 
         // Get all employees who are not members
-        const queryBuilder = this.employeeRepository.createQueryBuilder('employee');
+        const queryBuilder = this.employeeRepository.createQueryBuilder('employee')
+            .leftJoinAndSelect('employee.employee_positions', 'employee_positions')
+            .leftJoinAndSelect('employee_positions.department', 'ep_department')
+            .leftJoinAndSelect('employee_positions.position', 'ep_position');
 
         if (memberIds.length > 0) {
             queryBuilder.where('employee.id NOT IN (:...memberIds)', { memberIds });
@@ -778,7 +807,19 @@ export class TeamService {
             .andWhere('employee.status = :status', { status: 'ACTIVE' })
             .orderBy('employee.full_name', 'ASC');
 
-        return await queryBuilder.getMany();
+        const employees = await queryBuilder.getMany();
+
+        // Transform to include department and position from employee_positions
+        return employees.map(emp => {
+            const currentPositions = emp.employee_positions?.filter(ep => ep.is_current) || [];
+            const primaryPosition = currentPositions[0] || null;
+            
+            return {
+                ...emp,
+                department: primaryPosition?.department?.name || null,
+                position: primaryPosition?.position?.title || null,
+            } as any;
+        });
     }
 
     /**
