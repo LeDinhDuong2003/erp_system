@@ -69,6 +69,14 @@ export class EmployeePositionController {
     return this.employeePositionService.getCurrentPosition(employeeId);
   }
 
+  @Get('employee/:employeeId')
+  @ApiOperation({ summary: 'Get all positions of an employee' })
+  @ApiParam({ name: 'employeeId', description: 'Employee ID', type: Number })
+  @ApiResponse({ status: 200, description: 'List of employee positions' })
+  getByEmployee(@Param('employeeId', ParseIntPipe) employeeId: number) {
+    return this.employeePositionService.getByEmployee(employeeId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get employee position by ID' })
   @ApiParam({ name: 'id', description: 'Employee position ID', type: Number })

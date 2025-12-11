@@ -9,6 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { EmployeePosition } from './EmployeePosition.entity';
+import { Position } from './Position.entity';
 
 @Entity({ name: 'departments' })
 export class Department {
@@ -39,5 +40,8 @@ export class Department {
 
   @OneToMany(() => EmployeePosition, (ep) => ep.department)
   employee_positions!: EmployeePosition[];
+
+  @OneToMany(() => Position, (pos) => pos.department)
+  positions!: Position[];
 }
 

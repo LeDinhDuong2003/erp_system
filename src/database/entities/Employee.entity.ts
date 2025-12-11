@@ -8,7 +8,7 @@ import { Issue, IssueChangeHistory, IssueComment } from './project-module/Issue.
 import { EmployeePosition } from './EmployeePosition.entity';
 import { Attendance } from './Attendance.entity';
 import { EmployeeSalary } from './EmployeeSalary.entity';
-import { LeaveRequest } from './LeaveRequest.entity';
+import { HrRequest } from './HrRequest.entity';
 import { File } from './File.entity';
 import { Report } from './Report.entity';
 import { Department } from './Department.entity'; 
@@ -73,12 +73,6 @@ export class Employee {
 
   @Column({ type: 'varchar', length: 30, nullable: true })
   phone!: string | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  department!: string | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  position!: string | null;
 
   @Column({ type: 'text', nullable: true })
   avatar_url!: string | null;
@@ -149,14 +143,14 @@ export class Employee {
   @OneToMany(() => EmployeePosition, (ep) => ep.employee)
   employee_positions!: EmployeePosition[];
 
-  @OneToMany(() => Attendance, (att) => att.employee)
+  @OneToMany(() => Attendance, (att) => (att as any).employee)
   attendances!: Attendance[];
 
   @OneToMany(() => EmployeeSalary, (es) => es.employee)
   salaries!: EmployeeSalary[];
 
-  @OneToMany(() => LeaveRequest, (lr) => lr.employee)
-  leave_requests!: LeaveRequest[];
+  @OneToMany(() => HrRequest, (hr) => hr.employee)
+  hr_requests!: HrRequest[];
 
   @OneToMany(() => File, (f) => f.employee)
   files!: File[];

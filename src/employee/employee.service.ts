@@ -168,7 +168,13 @@ export class EmployeeService {
         where: where as any,
         skip,
         take,
-        relations: ['employee_role_assignments', 'employee_role_assignments.role'],
+        relations: [
+          'employee_role_assignments', 
+          'employee_role_assignments.role',
+          'employee_positions',
+          'employee_positions.department',
+          'employee_positions.position',
+        ],
         order: { created_at: 'DESC' },
       }),
       this.employeeRepository.count({ where: where as any }),
@@ -191,6 +197,9 @@ export class EmployeeService {
         'employee_role_assignments.role',
         'employee_role_assignments.role.role_permissions',
         'employee_role_assignments.role.role_permissions.permission',
+        'employee_positions',
+        'employee_positions.department',
+        'employee_positions.position',
       ],
     });
 
@@ -371,14 +380,33 @@ export class EmployeeService {
   }
 
   private transformEmployee(employee: any) {
+    const { department, position, ...rest } = employee;
     return {
-      ...employee,
+      ...rest,
       roles: employee.employee_role_assignments?.map((er: any) => ({
         id: er.role.id,
         code: er.role.code,
         name: er.role.name,
         description: er.role.description,
       })),
+      employee_positions: employee.employee_positions?.map((ep: any) => ({
+        id: ep.id,
+        employee_id: ep.employee_id,
+        department_id: ep.department_id,
+        position_id: ep.position_id,
+        start_date: ep.start_date,
+        end_date: ep.end_date,
+        is_current: ep.is_current,
+        department: ep.department ? {
+          id: ep.department.id,
+          name: ep.department.name,
+        } : null,
+        position: ep.position ? {
+          id: ep.position.id,
+          title: ep.position.title,
+          level: ep.position.level,
+        } : null,
+      })) || [],
     };
   }
 }

@@ -57,10 +57,15 @@ export class EmployeePositionService {
       }
     }
 
-    // If setting as current, unset other current positions
-    if (createEmployeePositionDto.is_current) {
+    // If setting as current, unset other current positions in the same department
+    // Allow employees to have multiple current positions in different departments
+    if (createEmployeePositionDto.is_current && createEmployeePositionDto.department_id) {
       await this.employeePositionRepository.update(
-        { employee_id: createEmployeePositionDto.employee_id, is_current: true },
+        { 
+          employee_id: createEmployeePositionDto.employee_id, 
+          department_id: createEmployeePositionDto.department_id,
+          is_current: true 
+        },
         { is_current: false },
       );
     }
@@ -129,6 +134,16 @@ export class EmployeePositionService {
     return currentPosition;
   }
 
+  async getByEmployee(employeeId: number) {
+    const employeePositions = await this.employeePositionRepository.find({
+      where: { employee_id: employeeId },
+      relations: ['employee', 'department', 'position'],
+      order: { is_current: 'DESC', start_date: 'DESC' },
+    });
+
+    return employeePositions;
+  }
+
   async update(id: number, updateEmployeePositionDto: UpdateEmployeePositionDto) {
     const employeePosition = await this.employeePositionRepository.findOne({
       where: { id },
@@ -160,10 +175,15 @@ export class EmployeePositionService {
       }
     }
 
-    // If setting as current, unset other current positions
-    if (updateEmployeePositionDto.is_current) {
+    // If setting as current, unset other current positions in the same department
+    // Allow employees to have multiple current positions in different departments
+    if (updateEmployeePositionDto.is_current && employeePosition.department_id) {
       await this.employeePositionRepository.update(
-        { employee_id: employeePosition.employee_id, is_current: true },
+        { 
+          employee_id: employeePosition.employee_id,
+          department_id: employeePosition.department_id,
+          is_current: true 
+        },
         { is_current: false },
       );
     }

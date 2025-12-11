@@ -106,5 +106,23 @@ export class DepartmentController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.departmentService.remove(id);
   }
+
+  @Get(':id/employees')
+  @ApiOperation({ summary: 'Get employees in department and all child departments' })
+  @ApiParam({ name: 'id', description: 'Department ID', type: Number })
+  @ApiResponse({ status: 200, description: 'Employees retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Department not found' })
+  getEmployees(@Param('id', ParseIntPipe) id: number) {
+    return this.departmentService.getEmployees(id);
+  }
+
+  @Get(':id/statistics')
+  @ApiOperation({ summary: 'Get department statistics' })
+  @ApiParam({ name: 'id', description: 'Department ID', type: Number })
+  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Department not found' })
+  getStatistics(@Param('id', ParseIntPipe) id: number) {
+    return this.departmentService.getStatistics(id);
+  }
 }
 

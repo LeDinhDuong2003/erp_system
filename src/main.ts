@@ -48,7 +48,7 @@ async function bootstrap() {
     .addTag('employee-positions', 'Employee position management')
     .addTag('attendance', 'Attendance management')
     .addTag('employee-salary', 'Employee salary management')
-    .addTag('leave-requests', 'Leave request management')
+    .addTag('hr-requests', 'HR request management (leave, overtime, late/early)')
     .addTag('files', 'File management')
     .addTag('reports', 'Report management')
     .build();
