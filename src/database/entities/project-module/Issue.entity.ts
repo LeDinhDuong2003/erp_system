@@ -12,8 +12,8 @@ import {
 } from 'typeorm';
 import { Project } from './Project.entity';
 import { Employee } from '../Employee.entity';
-import { SprintIssue } from './Sprint.entity';
 import { WorkflowSchemeMapping, WorkflowStatus } from './Workflow.entity';
+import { Sprint } from './Sprint.entity';
 
 
 
@@ -164,8 +164,12 @@ export class Issue {
   // @OneToMany(() => IssueChangeHistory, (history) => history.issue)
   change_histories!: IssueChangeHistory[];
 
-  // @OneToMany(() => SprintIssue, (si) => si.issue)
-  sprint_issues!: SprintIssue[];
+  @Column({ nullable: true })
+  sprint_id!: number | null;
+
+  @ManyToOne(() => Sprint, (sprint) => sprint.issues)
+  @JoinColumn({ name: 'sprint_id' })
+  sprint!: Sprint | null;
 }
 
 

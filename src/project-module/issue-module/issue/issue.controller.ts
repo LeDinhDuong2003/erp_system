@@ -198,7 +198,7 @@ export class IssueController {
         @Param('workflowId', ParseIntPipe) workflowId: number,
         @Query('projectId', ParseIntPipe) projectId: number, // ✅ Thêm projectId param
     ): any {
-        return this.issueBoardService.getIssuesByWorkflowStatus(workflowId);
+        return this.issueBoardService.getIssuesByWorkflowStatus(workflowId, projectId);
     }
 
     /**

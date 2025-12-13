@@ -63,7 +63,7 @@ import {
 } from './database/entities/project-module/Workflow.entity';
 import { EpicModule } from './project-module/epic/epic.module';
 import { SprintModule } from './project-module/sprint/sprint.module';
-import { Sprint, SprintIssue } from './database/entities/project-module/Sprint.entity';
+import { Sprint } from './database/entities/project-module/Sprint.entity';
 import { getDatabaseConfig } from './common/utils/database-url-parser';
 import { PermissionScheme, ProjectPermission, ProjectRole, ProjectRoleAssignment } from './database/entities/project-module/Permission.entity';
 import { TeamModule } from './project-module/team/team.module';
@@ -75,6 +75,7 @@ import { NotificationModule } from './project-module/notification/notification.m
 import { StatisticsModule } from './project-module/statistics/statistics.module';
 import { RedisModule } from './common/redis.module';
 import { BullModule } from '@nestjs/bull';
+import { WorkflowStatusModule } from './project-module/issue-module/workflow-status/workflow-status.module';
 
 @Module({
   imports: [
@@ -104,7 +105,6 @@ import { BullModule } from '@nestjs/bull';
         IssueLink,
         IssueType,
         Sprint,
-        SprintIssue,
         IssueChangeHistory,
         Workflow,
         WorkflowScheme,
@@ -155,7 +155,6 @@ import { BullModule } from '@nestjs/bull';
       IssueLink,
       IssueType,
       Sprint,
-      SprintIssue,
       IssueChangeHistory,
       Workflow,
       WorkflowScheme,
@@ -189,6 +188,7 @@ import { BullModule } from '@nestjs/bull';
     StatisticsModule,
     EpicModule,
     IssueModule,
+    WorkflowStatusModule,
     SprintModule,
     IssueCommentModule,
     ProjectPermissionModule,

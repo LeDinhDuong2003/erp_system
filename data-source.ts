@@ -41,7 +41,6 @@ import {
 // Sprint entities (từ Sprint.entity.ts)
 import {
   Sprint,
-  SprintIssue,
 } from './src/database/entities/project-module/Sprint.entity';
 
 // Permission entities (từ Permission.entity.ts)
@@ -112,7 +111,6 @@ export const AppDataSource = new DataSource({
     
     // Project Module - Sprints
     Sprint,
-    SprintIssue,
     
     // Project Module - Permissions
     PermissionScheme,

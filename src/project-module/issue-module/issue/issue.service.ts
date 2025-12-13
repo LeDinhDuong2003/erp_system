@@ -375,19 +375,6 @@ export class IssueService {
       // 5. Xóa tất cả change history
       await manager.delete(IssueChangeHistory, { issue_id: id });
 
-      // 6. Xóa khỏi sprint_issues (nếu có table này)
-      try {
-        await manager
-          .createQueryBuilder()
-          .delete()
-          .from('sprint_issues')
-          .where('issue_id = :id', { id })
-          .execute();
-      } catch (error) {
-        // Ignore if table doesn't exist
-        console.log('sprint_issues table may not exist, skipping...');
-      }
-
       // 7. Cuối cùng, xóa issue
       await manager.delete(Issue, { id });
     });

@@ -4,7 +4,7 @@ import { StatisticsController } from './statistics.controller';
 import { StatisticsService } from './statistics.service';
 import { Project } from '../../database/entities/project-module/Project.entity';
 import { Issue, Epic } from '../../database/entities/project-module/Issue.entity';
-import { Sprint, SprintIssue } from '../../database/entities/project-module/Sprint.entity';
+import { Sprint } from '../../database/entities/project-module/Sprint.entity';
 import { WorkflowStatus } from '../../database/entities/project-module/Workflow.entity';
 
 @Module({
@@ -14,7 +14,6 @@ import { WorkflowStatus } from '../../database/entities/project-module/Workflow.
       Issue,
       Epic,
       Sprint,
-      SprintIssue,
       WorkflowStatus,
     ]),
   ],
