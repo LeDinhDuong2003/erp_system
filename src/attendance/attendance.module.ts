@@ -8,7 +8,6 @@ import { AttendanceController } from './attendance.controller';
 import { Attendance } from '../database/entities/Attendance.entity';
 import { Employee } from '../database/entities/Employee.entity';
 import { EmployeeDevice } from '../database/entities/EmployeeDevice.entity';
-import { AttendanceChallenge } from '../database/entities/AttendanceChallenge.entity';
 
 @Module({
   imports: [
@@ -16,7 +15,6 @@ import { AttendanceChallenge } from '../database/entities/AttendanceChallenge.en
       Attendance,
       Employee,
       EmployeeDevice,
-      AttendanceChallenge,
     ]),
     SalaryCalculationModule,
   ],

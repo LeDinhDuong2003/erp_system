@@ -59,7 +59,6 @@ import { EmployeeSalary } from './src/database/entities/EmployeeSalary.entity';
 import { File } from './src/database/entities/File.entity';
 import { Report } from './src/database/entities/Report.entity';
 import { EmployeeDevice } from './src/database/entities/EmployeeDevice.entity';
-import { AttendanceChallenge } from './src/database/entities/AttendanceChallenge.entity';
 import { WorkScheduleSettings } from './src/database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from './src/database/entities/SalarySettings.entity';
 import { HrRequest } from './src/database/entities/HrRequest.entity';
@@ -127,7 +126,6 @@ export const AppDataSource = new DataSource({
     File,
     Report,
     EmployeeDevice,
-    AttendanceChallenge,
     WorkScheduleSettings,
     SalarySettings,
     HrRequest,
