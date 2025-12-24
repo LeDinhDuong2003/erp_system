@@ -43,7 +43,7 @@ export class EmployeePosition {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at!: Date;
 
-  @ManyToOne(() => Employee, (emp) => emp.employee_positions)
+  @ManyToOne(() => Employee, (emp) => emp.employee_positions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'employee_id' })
   employee!: Employee;
 

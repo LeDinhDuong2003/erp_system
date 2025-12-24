@@ -6,7 +6,7 @@ import type { Queue } from 'bull';
 import { EmployeeSalary, SalaryStatus } from '../database/entities/EmployeeSalary.entity';
 import { Employee } from '../database/entities/Employee.entity';
 import { Attendance } from '../database/entities/Attendance.entity';
-import { HrRequest, HrRequestType, HrRequestStatus, LeaveType } from '../database/entities/HrRequest.entity';
+import { HrRequest, HrRequestType, HrRequestStatus, LeaveType, LateEarlyType } from '../database/entities/HrRequest.entity';
 import { WorkScheduleSettings } from '../database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from '../database/entities/SalarySettings.entity';
 import { WorkScheduleService } from './work-schedule.service';
@@ -126,10 +126,10 @@ export class SalaryCalculationService {
     // Calculate total work hours
     const totalWorkHours = this.calculateTotalWorkHours(attendances, workSchedule);
 
-    // Calculate overtime hours (only approved)
-    const overtimeHours = approvedOvertimes.reduce(
-      (total, ot) => total + (Number(ot.overtime_hours) || 0),
-      0,
+    // Calculate overtime hours (only approved and verified with actual attendance)
+    const overtimeHours = this.calculateVerifiedOvertimeHours(
+      approvedOvertimes,
+      attendances,
     );
 
     // Calculate base salary - ensure it's a valid number
@@ -224,7 +224,9 @@ export class SalaryCalculationService {
   }
 
   /**
-   * Calculate work days in a month (excluding weekends and approved leaves)
+   * Calculate work days in a month (excluding weekends and unpaid leaves)
+   * Paid leaves (ANNUAL, SICK, PERSONAL, MATERNITY, PATERNITY, OTHER) are counted as work days
+   * UNPAID leaves are not counted
    */
   private calculateWorkDays(
     startDate: Date,
@@ -235,20 +237,41 @@ export class SalaryCalculationService {
     let workDays = 0;
     const currentDate = new Date(startDate);
 
+    // Paid leave types - these are counted as work days
+    const paidLeaveTypes = [
+      LeaveType.ANNUAL, // Phép năm
+      LeaveType.SICK,
+      LeaveType.PERSONAL,
+      LeaveType.MATERNITY,
+      LeaveType.PATERNITY,
+      LeaveType.OTHER, // Phép đặc biệt
+    ];
+
     while (currentDate <= endDate) {
       // Check if it's a working day
       if (this.workScheduleService.isWorkingDay(currentDate, workSchedule)) {
         // Check if it's in an approved leave
-        const isOnLeave = approvedLeaves.some((leave) => {
+        const leaveOnThisDate = approvedLeaves.find((leave) => {
           if (leave.start_date && leave.end_date) {
             const leaveStart = new Date(leave.start_date);
+            leaveStart.setHours(0, 0, 0, 0);
             const leaveEnd = new Date(leave.end_date);
-            return currentDate >= leaveStart && currentDate <= leaveEnd;
+            leaveEnd.setHours(23, 59, 59, 999);
+            const checkDate = new Date(currentDate);
+            checkDate.setHours(0, 0, 0, 0);
+            return checkDate >= leaveStart && checkDate <= leaveEnd;
           }
           return false;
         });
 
-        if (!isOnLeave) {
+        if (leaveOnThisDate) {
+          // If it's a paid leave (phép năm, phép đặc biệt, etc.), count as work day
+          if (leaveOnThisDate.leave_type && paidLeaveTypes.includes(leaveOnThisDate.leave_type)) {
+            workDays++;
+          }
+          // If it's UNPAID leave, don't count as work day
+        } else {
+          // Not on leave, count as work day
           workDays++;
         }
       }
@@ -277,7 +300,7 @@ export class SalaryCalculationService {
   }
 
   /**
-   * Calculate deductions for late/early (only if not approved)
+   * Calculate deductions for late/early (only if not approved or time doesn't match)
    */
   private calculateDeductions(
     attendances: Attendance[],
@@ -288,15 +311,18 @@ export class SalaryCalculationService {
     let deduction = 0;
 
     for (const att of attendances) {
-      // Check if there's an approved late/early request for this date
-      const hasApprovedRequest = approvedLateEarly.some((req) => {
+      const attDateStr = new Date(att.date).toDateString();
+      
+      // Find approved late/early request for this date
+      const approvedRequest = approvedLateEarly.find((req) => {
         if (req.late_early_date) {
-          return new Date(req.late_early_date).toDateString() === new Date(att.date).toDateString();
+          return new Date(req.late_early_date).toDateString() === attDateStr;
         }
         return false;
       });
 
-      if (!hasApprovedRequest) {
+      if (!approvedRequest) {
+        // No approved request - calculate penalty
         // Calculate late minutes penalty
         if (att.late_minutes && att.late_minutes > workSchedule.late_tolerance_minutes) {
           const lateHours = (att.late_minutes - workSchedule.late_tolerance_minutes) / 60;
@@ -312,10 +338,144 @@ export class SalaryCalculationService {
             (att.early_leave_minutes - workSchedule.early_leave_tolerance_minutes) / 60;
           deduction += earlyHours * hourlyRate * 0.5; // 50% penalty for early leave
         }
+      } else {
+        // Has approved request - verify time matches
+        const timeMatches = this.verifyLateEarlyTime(att, approvedRequest, workSchedule);
+        
+        if (!timeMatches) {
+          // Request approved but time doesn't match - still calculate penalty
+          if (approvedRequest.late_early_type === LateEarlyType.LATE && 
+              att.late_minutes && 
+              att.late_minutes > workSchedule.late_tolerance_minutes) {
+            const lateHours = (att.late_minutes - workSchedule.late_tolerance_minutes) / 60;
+            deduction += lateHours * hourlyRate * 0.5;
+          }
+          
+          if (approvedRequest.late_early_type === LateEarlyType.EARLY && 
+              att.early_leave_minutes && 
+              att.early_leave_minutes > workSchedule.early_leave_tolerance_minutes) {
+            const earlyHours =
+              (att.early_leave_minutes - workSchedule.early_leave_tolerance_minutes) / 60;
+            deduction += earlyHours * hourlyRate * 0.5;
+          }
+        }
+        // If time matches, no deduction
       }
     }
 
     return Math.round(deduction * 100) / 100;
+  }
+
+  /**
+   * Verify if actual attendance time matches approved late/early request time
+   */
+  private verifyLateEarlyTime(
+    attendance: Attendance,
+    request: HrRequest,
+    workSchedule: WorkScheduleSettings,
+  ): boolean {
+    if (!request.actual_time) {
+      // If no actual_time specified in request, consider it valid (approved without time check)
+      return true;
+    }
+
+    const toleranceMinutes = 30; // Allow 30 minutes difference
+
+    if (request.late_early_type === LateEarlyType.LATE && attendance.check_in) {
+      // For late arrival, check if actual check-in time matches requested actual_time
+      const requestedTime = new Date(`${attendance.date.toISOString().split('T')[0]}T${request.actual_time}`);
+      const actualCheckIn = new Date(attendance.check_in);
+      
+      // Get just the time portion (hours and minutes)
+      const requestedTimeOnly = requestedTime.getHours() * 60 + requestedTime.getMinutes();
+      const actualTimeOnly = actualCheckIn.getHours() * 60 + actualCheckIn.getMinutes();
+      
+      const diff = Math.abs(actualTimeOnly - requestedTimeOnly);
+      return diff <= toleranceMinutes;
+    }
+
+    if (request.late_early_type === LateEarlyType.EARLY && attendance.check_out) {
+      // For early departure, check if actual check-out time matches requested actual_time
+      const requestedTime = new Date(`${attendance.date.toISOString().split('T')[0]}T${request.actual_time}`);
+      const actualCheckOut = new Date(attendance.check_out);
+      
+      const requestedTimeOnly = requestedTime.getHours() * 60 + requestedTime.getMinutes();
+      const actualTimeOnly = actualCheckOut.getHours() * 60 + actualCheckOut.getMinutes();
+      
+      const diff = Math.abs(actualTimeOnly - requestedTimeOnly);
+      return diff <= toleranceMinutes;
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate verified overtime hours - only count OT if attendance matches request
+   * OT should be verified that actual check-out time matches OT end_time
+   */
+  private calculateVerifiedOvertimeHours(
+    approvedOvertimes: HrRequest[],
+    attendances: Attendance[],
+  ): number {
+    let totalOvertimeHours = 0;
+    const toleranceMinutes = 60; // Allow 60 minutes difference for OT end time (more flexible)
+
+    for (const otRequest of approvedOvertimes) {
+      if (!otRequest.overtime_date || !otRequest.start_time || !otRequest.end_time) {
+        continue;
+      }
+
+      const otDateStr = new Date(otRequest.overtime_date).toDateString();
+      
+      // Find attendance record for OT date
+      const attendance = attendances.find((att) => {
+        return new Date(att.date).toDateString() === otDateStr;
+      });
+
+      if (!attendance || !attendance.check_in || !attendance.check_out) {
+        // No attendance record or incomplete check-in/out - don't count OT
+        continue;
+      }
+
+      // Parse OT request times
+      const otDate = otRequest.overtime_date instanceof Date 
+        ? otRequest.overtime_date 
+        : new Date(otRequest.overtime_date);
+      const otDateStrOnly = otDate.toISOString().split('T')[0];
+      
+      // Parse OT start and end times
+      const [startHour, startMin] = otRequest.start_time.split(':').map(Number);
+      const [endHour, endMin] = otRequest.end_time.split(':').map(Number);
+      
+      const otStartTime = new Date(otDate);
+      otStartTime.setHours(startHour, startMin || 0, 0, 0);
+      
+      const otEndTime = new Date(otDate);
+      otEndTime.setHours(endHour, endMin || 0, 0, 0);
+      
+      // Check if OT end time is on next day (e.g., 22:00 to 01:00)
+      if (otEndTime <= otStartTime) {
+        otEndTime.setDate(otEndTime.getDate() + 1);
+      }
+
+      // Get actual check-out time
+      const actualCheckOut = new Date(attendance.check_out);
+      
+      // Calculate time differences in minutes
+      const otEndTimeMinutes = otEndTime.getTime();
+      const actualCheckOutTimeMinutes = actualCheckOut.getTime();
+      const diffMinutes = Math.abs(actualCheckOutTimeMinutes - otEndTimeMinutes) / (1000 * 60);
+
+      // Verify OT end time is close to actual check-out time
+      // OT end_time should match actual check-out time (within tolerance)
+      if (diffMinutes <= toleranceMinutes) {
+        // Times match - count the OT hours from request
+        totalOvertimeHours += Number(otRequest.overtime_hours) || 0;
+      }
+      // If times don't match, don't count this OT
+    }
+
+    return Math.round(totalOvertimeHours * 100) / 100;
   }
 
   /**

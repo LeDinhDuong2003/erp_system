@@ -16,6 +16,8 @@
     "seed:prod": "node dist/scripts/seed.js",
     "seed:hr": "ts-node -r tsconfig-paths/register src/scripts/seed.ts",
     "debug:attendance": "ts-node -r tsconfig-paths/register src/scripts/debug-attendance.ts",
+    "calculate-salary": "ts-node -r tsconfig-paths/register src/scripts/calculate-salary.ts",
+    "calculate-all-salaries": "ts-node -r tsconfig-paths/register src/scripts/calculate-all-salaries.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

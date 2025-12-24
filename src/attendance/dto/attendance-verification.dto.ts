@@ -68,12 +68,6 @@ export class RequestChallengeDto {
 
 // ============ CHALLENGE RESPONSE DTO ============
 export class ChallengeResponseDto {
-  @ApiProperty({ description: 'Challenge token' })
-  token: string;
-
-  @ApiProperty({ description: 'Token expiration time' })
-  expires_at: Date;
-
   @ApiProperty({ description: 'Pre-signed URL for photo upload' })
   upload_url: string;
 

@@ -36,7 +36,6 @@ import { EmployeeSalary } from './database/entities/EmployeeSalary.entity';
 import { File } from './database/entities/File.entity';
 import { Report } from './database/entities/Report.entity';
 import { EmployeeDevice } from './database/entities/EmployeeDevice.entity';
-import { AttendanceChallenge } from './database/entities/AttendanceChallenge.entity';
 import { WorkScheduleSettings } from './database/entities/WorkScheduleSettings.entity';
 import { SalarySettings } from './database/entities/SalarySettings.entity';
 import { HrRequest } from './database/entities/HrRequest.entity';
@@ -74,10 +73,12 @@ import { NotificationSeederService } from './database/seeders/project-module/not
 import { NotificationModule } from './project-module/notification/notification.module';
 import { StatisticsModule } from './project-module/statistics/statistics.module';
 import { RedisModule } from './common/redis.module';
+import { AuditLogModule } from './common/audit-log.module';
 import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
+    AuditLogModule,
     RedisModule,
     BullModule.forRoot({
       redis: {
@@ -126,7 +127,6 @@ import { BullModule } from '@nestjs/bull';
         File,
         Report,
         EmployeeDevice,
-        AttendanceChallenge,
         Asset,
         Category,
         Assignment,
@@ -177,7 +177,6 @@ import { BullModule } from '@nestjs/bull';
       File,
       Report,
         EmployeeDevice,
-        AttendanceChallenge,
       Asset,
       Category,
       Assignment,

@@ -13,7 +13,6 @@ import * as crypto from 'crypto';
 import { Attendance } from '../database/entities/Attendance.entity';
 import { Employee } from '../database/entities/Employee.entity';
 import { EmployeeDevice, DeviceStatus } from '../database/entities/EmployeeDevice.entity';
-import { AttendanceChallenge } from '../database/entities/AttendanceChallenge.entity';
 import { S3Service } from './s3.service';
 import { WorkScheduleService } from '../salary-calculation/work-schedule.service';
 import {
@@ -35,8 +34,6 @@ export class AttendanceVerificationService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(EmployeeDevice)
     private readonly deviceRepository: Repository<EmployeeDevice>,
-    @InjectRepository(AttendanceChallenge)
-    private readonly challengeRepository: Repository<AttendanceChallenge>,
     private readonly s3Service: S3Service,
     private readonly workScheduleService: WorkScheduleService,
   ) {}
@@ -69,7 +66,7 @@ export class AttendanceVerificationService {
   }
 
   /**
-   * Generate a secure challenge token
+   * Generate a secure challenge token (DEPRECATED - no longer used)
    */
   private generateChallengeToken(): string {
     return crypto.randomBytes(32).toString('hex');
@@ -185,30 +182,6 @@ export class AttendanceVerificationService {
       deviceMessage = 'New device registered successfully';
     }
 
-    // Check if there's an existing valid challenge
-    await this.challengeRepository.update(
-      {
-        employee_id: employeeId,
-        is_used: false,
-      },
-      { is_used: true }, // Invalidate old challenges
-    );
-
-    // Generate new challenge
-    const token = this.generateChallengeToken();
-    const expiresAt = new Date(
-      Date.now() + OFFICE_CONFIG.challenge_expiry_seconds * 1000,
-    );
-
-    const challenge = this.challengeRepository.create({
-      employee_id: employeeId,
-      token,
-      action_type: dto.action_type,
-      expires_at: expiresAt,
-      expected_device_id: dto.device_id,
-    });
-    await this.challengeRepository.save(challenge);
-
     // Generate S3 pre-signed URL for photo upload
     const photoType =
       dto.action_type === AttendanceActionType.CHECK_IN ? 'check_in' : 'check_out';
@@ -219,8 +192,6 @@ export class AttendanceVerificationService {
     );
 
     return {
-      token,
-      expires_at: expiresAt,
       upload_url: uploadInfo.uploadUrl,
       photo_url: uploadInfo.fileUrl,
       upload_expires_in: uploadInfo.expiresIn,
