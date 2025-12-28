@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Category } from './category.entity';
+import { Supplier } from '../assetrequest/supplier.entity';
 
 export enum AssetStatus {
   NEW = 'NEW',
@@ -63,4 +64,8 @@ export class Asset {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
+
+  @ManyToOne(() => Supplier, { eager: false, nullable: true })
+  @JoinColumn({ name: 'supplier_id' })
+  supplier?: Supplier;
 }

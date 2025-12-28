@@ -50,7 +50,7 @@ export class CategoryController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'MANAGER')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.categoryService.remove(id);
   }
