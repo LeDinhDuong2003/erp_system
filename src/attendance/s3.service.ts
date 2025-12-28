@@ -17,8 +17,8 @@ export class S3Service {
   private region: string;
 
   constructor() {
-    this.region = process.env.AWS_REGION || 'ap-southeast-1';
-    this.bucketName = process.env.AWS_S3_BUCKET || 'erp-attendance-photos';
+    this.region = process.env.AWS_REGION || 'ap-southeast-2';
+    this.bucketName = process.env.AWS_S3_BUCKET || 'erp-system-2025';
 
     this.s3Client = new S3Client({
       region: this.region,
