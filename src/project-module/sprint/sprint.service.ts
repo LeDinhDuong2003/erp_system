@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Not } from 'typeorm';
-import { Sprint, SprintIssue } from '../../database/entities/project-module/Sprint.entity';
+import { Sprint } from '../../database/entities/project-module/Sprint.entity';
 import { Issue } from '../../database/entities/project-module/Issue.entity';
 import { Project } from '../../database/entities/project-module/Project.entity';
 import { CreateSprintDto } from './dto/create-sprint.dto';
@@ -19,9 +19,6 @@ export class SprintService {
     constructor(
         @InjectRepository(Sprint)
         private readonly sprintRepository: Repository<Sprint>,
-
-        @InjectRepository(SprintIssue)
-        private readonly sprintIssueRepository: Repository<SprintIssue>,
 
         @InjectRepository(Issue)
         private readonly issueRepository: Repository<Issue>,
@@ -54,33 +51,58 @@ export class SprintService {
         return await this.sprintRepository.save(sprint);
     }
 
-    async findAll(projectId?: number): Promise<Sprint[]> {
-        const queryBuilder = this.sprintRepository
-            .createQueryBuilder('sprint')
-            .leftJoinAndSelect('sprint.project', 'project')
-            .leftJoin('sprint.sprint_issues', 'sprint_issues')
-            .leftJoin('sprint_issues.issue', 'issue')
-            .addSelect('COUNT(issue.id)', 'issue_count')
-            .groupBy('sprint.id')
-            .addGroupBy('project.id')
-            .orderBy('sprint.start_date', 'DESC');
-
+    async findAll(projectId?: number): Promise<any[]> {
+        const whereClause: any = {};
+        
         if (projectId) {
-            queryBuilder.where('sprint.project_id = :projectId', { projectId });
+            whereClause.project_id = projectId;
         }
-
-        const sprints = await queryBuilder.getRawAndEntities();
-
-        return sprints.entities.map((sprint, index) => ({
-            ...sprint,
-            issue_count: parseInt(sprints.raw[index].issue_count) || 0,
-        })) as any;
+    
+        const sprints = await this.sprintRepository.find({
+            where: whereClause,
+            relations: ['project'],
+            order: { 
+                start_date: 'DESC',
+            },
+        });
+    
+        // Đếm issues và format dates
+        const result = await Promise.all(
+            sprints.map(async (sprint) => {
+                const issue_count = await this.issueRepository.count({
+                    where: { sprint_id: sprint.id },
+                });
+                
+                // Parse dates manually
+                const start_date = sprint.start_date 
+                    ? new Date(sprint.start_date).toISOString() 
+                    : null;
+                const end_date = sprint.end_date 
+                    ? new Date(sprint.end_date).toISOString() 
+                    : null;
+                
+                return {
+                    id: sprint.id,
+                    project_id: sprint.project_id,
+                    sprint_name: sprint.sprint_name,
+                    goal: sprint.goal,
+                    start_date,
+                    end_date,
+                    duration_days: sprint.duration_days,
+                    status: sprint.status,
+                    project: sprint.project,
+                    issue_count,
+                };
+            })
+        );
+    
+        return result;
     }
 
     async findOne(id: number): Promise<Sprint> {
         const sprint = await this.sprintRepository.findOne({
             where: { id },
-            relations: ['project', 'sprint_issues', 'sprint_issues.issue', 'sprint_issues.issue.issue_type'],
+            relations: ['project', 'issues', 'issues.issue_type'],
         });
 
         if (!sprint) {
@@ -90,7 +112,7 @@ export class SprintService {
         return sprint;
     }
 
-    async getSprintIssues(sprintId: number): Promise<any> {
+    async getSprintIssues(sprintId: number): Promise<Issue[]> {
         const sprint = await this.sprintRepository.findOne({
             where: { id: sprintId },
         });
@@ -99,50 +121,37 @@ export class SprintService {
             throw new NotFoundException(`Sprint with ID ${sprintId} not found`);
         }
 
-        const sprintIssues = await this.sprintIssueRepository.find({
+        const issues = await this.issueRepository.find({
             where: { sprint_id: sprintId },
             relations: [
-                'issue',
-                'issue.issue_type',
-                'issue.current_status',
-                'issue.assignees',
-                'issue.epic_link',
+                'issue_type',
+                'current_status',
+                'assignees',
+                'epic_link',
             ],
-            order: { rank_order: 'ASC' },
+            order: { order_index: 'ASC' },
         });
 
-        return sprintIssues.map(si => ({
-            ...si.issue,
-            rank_order: si.rank_order,
-        }));
+        return issues;
     }
 
     async getBacklog(projectId: number): Promise<Issue[]> {
-        // Get all issues in project that are NOT in any sprint
-        const issuesInSprints = await this.sprintIssueRepository
-            .createQueryBuilder('si')
-            .select('si.issue_id')
-            .getMany();
+        // Get all issues in project that are NOT in any sprint (sprint_id is null)
+        const issues = await this.issueRepository.find({
+            where: { 
+                project_id: projectId,
+                sprint_id: IsNull(),
+            },
+            relations: [
+                'issue_type',
+                'current_status',
+                'assignees',
+                'epic_link',
+            ],
+            order: { order_index: 'ASC' },
+        });
 
-        const issueIdsInSprints = issuesInSprints.map(si => si.issue_id);
-
-        const queryBuilder = this.issueRepository
-            .createQueryBuilder('issue')
-            .leftJoinAndSelect('issue.issue_type', 'issue_type')
-            .leftJoinAndSelect('issue.current_status', 'current_status')
-            .leftJoinAndSelect('issue.assignees', 'assignees')
-            .leftJoinAndSelect('issue.epic_link', 'epic_link')
-            .where('issue.project_id = :projectId', { projectId });
-
-        if (issueIdsInSprints.length > 0) {
-            queryBuilder.andWhere('issue.id NOT IN (:...issueIds)', {
-                issueIds: issueIdsInSprints,
-            });
-        }
-
-        queryBuilder.orderBy('issue.order_index', 'ASC');
-
-        return await queryBuilder.getMany();
+        return issues;
     }
 
     async update(id: number, updateSprintDto: UpdateSprintDto): Promise<Sprint> {
@@ -172,7 +181,7 @@ export class SprintService {
     async remove(id: number): Promise<Sprint> {
         const sprint = await this.sprintRepository.findOne({
             where: { id },
-            relations: ['sprint_issues'],
+            relations: ['issues'],
         });
 
         if (!sprint) {
@@ -180,9 +189,9 @@ export class SprintService {
         }
 
         // Check if sprint has issues
-        if (sprint.sprint_issues && sprint.sprint_issues.length > 0) {
+        if (sprint.issues && sprint.issues.length > 0) {
             throw new BadRequestException(
-                `Cannot delete sprint with ${sprint.sprint_issues.length} issue(s). Please move issues first.`,
+                `Cannot delete sprint with ${sprint.issues.length} issue(s). Please move issues first.`,
             );
         }
 
@@ -257,7 +266,7 @@ export class SprintService {
 
     // -------------------- Issue Management --------------------
 
-    async addIssueToSprint(sprintId: number, addIssueDto: AddIssueToSprintDto): Promise<SprintIssue> {
+    async addIssueToSprint(sprintId: number, addIssueDto: AddIssueToSprintDto): Promise<Issue> {
         const sprint = await this.sprintRepository.findOne({ where: { id: sprintId } });
         if (!sprint) {
             throw new NotFoundException(`Sprint with ID ${sprintId} not found`);
@@ -271,49 +280,46 @@ export class SprintService {
         }
 
         // Check if issue is already in a sprint
-        const existingSprintIssue = await this.sprintIssueRepository.findOne({
-            where: { issue_id: addIssueDto.issue_id },
-        });
-
-        if (existingSprintIssue) {
+        if (issue.sprint_id && issue.sprint_id !== sprintId) {
             throw new BadRequestException(
-                `Issue is already in sprint ${existingSprintIssue.sprint_id}`,
+                `Issue is already in sprint ${issue.sprint_id}`,
             );
         }
 
-        // Get max rank_order and add 1
-        const maxRank = await this.sprintIssueRepository
-            .createQueryBuilder('si')
-            .select('MAX(si.rank_order)', 'max')
-            .where('si.sprint_id = :sprintId', { sprintId })
-            .getRawOne();
+        // Update issue's sprint_id
+        issue.sprint_id = sprintId;
 
-        const rankOrder = addIssueDto.rank_order ?? (maxRank?.max ? maxRank.max + 1 : 1);
+        // Update order_index if provided
+        if (addIssueDto.rank_order !== undefined) {
+            issue.order_index = addIssueDto.rank_order;
+        } else {
+            // Get max order_index in the sprint and add 1
+            const maxOrderIssue = await this.issueRepository
+                .createQueryBuilder('issue')
+                .select('MAX(issue.order_index)', 'max')
+                .where('issue.sprint_id = :sprintId', { sprintId })
+                .getRawOne();
 
-        const sprintIssue = this.sprintIssueRepository.create({
-            sprint_id: sprintId,
-            issue_id: addIssueDto.issue_id,
-            rank_order: rankOrder,
-        });
+            issue.order_index = maxOrderIssue?.max ? maxOrderIssue.max + 1 : 1;
+        }
 
-        return await this.sprintIssueRepository.save(sprintIssue);
+        return await this.issueRepository.save(issue);
     }
 
     async removeIssueFromSprint(sprintId: number, issueId: number): Promise<void> {
-        const sprintIssue = await this.sprintIssueRepository.findOne({
-            where: { sprint_id: sprintId, issue_id: issueId },
+        const issue = await this.issueRepository.findOne({
+            where: { id: issueId, sprint_id: sprintId },
         });
 
-        if (!sprintIssue) {
+        if (!issue) {
             throw new NotFoundException(
                 `Issue ${issueId} not found in sprint ${sprintId}`,
             );
         }
 
-        await this.sprintIssueRepository.delete({
-            sprint_id: sprintId,
-            issue_id: issueId,
-        });
+        // Set sprint_id to null to move back to backlog
+        issue.sprint_id = null;
+        await this.issueRepository.save(issue);
     }
 
     async moveIssueBetweenSprints(moveIssueDto: MoveIssueBetweenSprintsDto): Promise<any> {
@@ -327,11 +333,10 @@ export class SprintService {
             throw new NotFoundException(`Issue with ID ${issue_id} not found`);
         }
 
-        // Remove from current sprint if exists
-        await this.sprintIssueRepository.delete({ issue_id });
-
-        // If target_sprint_id is 0, move to backlog (do nothing more)
-        if (target_sprint_id === 0) {
+        // If target_sprint_id is 0 or null, move to backlog
+        if (!target_sprint_id || target_sprint_id === 0) {
+            issue.sprint_id = null;
+            await this.issueRepository.save(issue);
             return { message: 'Issue moved to backlog', issue_id };
         }
 
@@ -343,11 +348,30 @@ export class SprintService {
             throw new NotFoundException(`Sprint with ID ${target_sprint_id} not found`);
         }
 
-        // Add to target sprint
-        return await this.addIssueToSprint(target_sprint_id, {
+        // Update issue's sprint_id
+        issue.sprint_id = target_sprint_id;
+
+        // Update order_index if provided
+        if (rank_order !== undefined) {
+            issue.order_index = rank_order;
+        } else {
+            // Get max order_index in the target sprint and add 1
+            const maxOrderIssue = await this.issueRepository
+                .createQueryBuilder('issue')
+                .select('MAX(issue.order_index)', 'max')
+                .where('issue.sprint_id = :sprintId', { sprintId: target_sprint_id })
+                .getRawOne();
+
+            issue.order_index = maxOrderIssue?.max ? maxOrderIssue.max + 1 : 1;
+        }
+
+        await this.issueRepository.save(issue);
+
+        return { 
+            message: 'Issue moved successfully', 
             issue_id,
-            rank_order,
-        });
+            target_sprint_id 
+        };
     }
 
     async bulkMoveIssues(bulkMoveDto: BulkMoveIssuesDto): Promise<any> {
@@ -357,7 +381,7 @@ export class SprintService {
 
         for (const issue_id of issue_ids) {
             try {
-                const result = await this.moveIssueBetweenSprints({
+                await this.moveIssueBetweenSprints({
                     issue_id,
                     target_sprint_id,
                 });
@@ -376,11 +400,11 @@ export class SprintService {
     async reorderSprintIssues(sprintId: number, reorderDto: ReorderSprintIssuesDto): Promise<any> {
         const { ordered_issue_ids } = reorderDto;
 
-        // Update rank_order for each issue
+        // Update order_index for each issue
         for (let i = 0; i < ordered_issue_ids.length; i++) {
-            await this.sprintIssueRepository.update(
-                { sprint_id: sprintId, issue_id: ordered_issue_ids[i] },
-                { rank_order: i + 1 },
+            await this.issueRepository.update(
+                { id: ordered_issue_ids[i], sprint_id: sprintId },
+                { order_index: i + 1 },
             );
         }
 

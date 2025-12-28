@@ -9,6 +9,7 @@ import { IssueBoardService } from './status.service';
 import { Project } from 'src/database/entities/project-module/Project.entity';
 import { IssueHistoryService } from './issue-history.service';
 import { NotificationModule } from 'src/project-module/notification/notification.module';
+import { Sprint } from 'src/database/entities/project-module/Sprint.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NotificationModule } from 'src/project-module/notification/notification
       Epic,
       IssueChangeHistory,
       WorkflowSchemeMapping,
+      Sprint,
     ]),
     NotificationModule
   ],

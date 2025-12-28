@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Project } from '../../database/entities/project-module/Project.entity';
 import { Issue, Epic } from '../../database/entities/project-module/Issue.entity';
-import { Sprint, SprintIssue } from '../../database/entities/project-module/Sprint.entity';
+import { Sprint } from '../../database/entities/project-module/Sprint.entity';
 import { WorkflowStatus } from '../../database/entities/project-module/Workflow.entity';
 import {
   ProjectOverallStatistics,
@@ -36,9 +36,6 @@ export class StatisticsService {
 
     @InjectRepository(Sprint)
     private readonly sprintRepository: Repository<Sprint>,
-
-    @InjectRepository(SprintIssue)
-    private readonly sprintIssueRepository: Repository<SprintIssue>,
 
     @InjectRepository(WorkflowStatus)
     private readonly workflowStatusRepository: Repository<WorkflowStatus>,
@@ -347,7 +344,7 @@ export class StatisticsService {
 
     const sprints = await this.sprintRepository.find({
       where: whereClause,
-      relations: ['sprint_issues', 'sprint_issues.issue', 'sprint_issues.issue.current_status'],
+      relations: ['issues', 'issues.current_status'],
       order: { start_date: 'DESC' },
     });
 
@@ -369,19 +366,19 @@ export class StatisticsService {
 
     // Sprint Performance
     const sprintPerformance: SprintPerformance[] = sprints.map((sprint) => {
-      const totalIssues = sprint.sprint_issues?.length || 0;
-      const completedIssues = sprint.sprint_issues?.filter(
-        (si) => si.issue?.current_status?.status_category?.toLowerCase() === 'done',
+      const totalIssues = sprint.issues?.length || 0;
+      const completedIssues = sprint.issues?.filter(
+        (issue) => issue.current_status?.status_category?.toLowerCase() === 'done',
       ).length || 0;
 
-      const totalStoryPoints = sprint.sprint_issues?.reduce(
-        (sum, si) => sum + (si.issue?.story_points || 0),
+      const totalStoryPoints = sprint.issues?.reduce(
+        (sum, issue) => sum + (issue.story_points || 0),
         0,
       ) || 0;
 
-      const completedStoryPoints = sprint.sprint_issues
-        ?.filter((si) => si.issue?.current_status?.status_category?.toLowerCase() === 'done')
-        .reduce((sum, si) => sum + (si.issue?.story_points || 0), 0) || 0;
+      const completedStoryPoints = sprint.issues
+        ?.filter((issue) => issue.current_status?.status_category?.toLowerCase() === 'done')
+        .reduce((sum, issue) => sum + (issue.story_points || 0), 0) || 0;
 
       return {
         sprint_id: sprint.id,
@@ -402,14 +399,14 @@ export class StatisticsService {
     );
 
     const velocityTrend: VelocityTrend[] = completedSprints.slice(0, 10).map((sprint) => {
-      const totalStoryPoints = sprint.sprint_issues?.reduce(
-        (sum, si) => sum + (si.issue?.story_points || 0),
+      const totalStoryPoints = sprint.issues?.reduce(
+        (sum, issue) => sum + (issue.story_points || 0),
         0,
       ) || 0;
 
-      const completedStoryPoints = sprint.sprint_issues
-        ?.filter((si) => si.issue?.current_status?.status_category?.toLowerCase() === 'done')
-        .reduce((sum, si) => sum + (si.issue?.story_points || 0), 0) || 0;
+      const completedStoryPoints = sprint.issues
+        ?.filter((issue) => issue.current_status?.status_category?.toLowerCase() === 'done')
+        .reduce((sum, issue) => sum + (issue.story_points || 0), 0) || 0;
 
       return {
         sprint_name: sprint.sprint_name,

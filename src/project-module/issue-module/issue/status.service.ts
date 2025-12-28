@@ -6,6 +6,7 @@ import { WorkflowStatus } from 'src/database/entities/project-module/Workflow.en
 import { MoveCardDto, ReorderCardsDto, ReorderColumnsDto } from './dto/board-operations.dto';
 import { IssueHistoryService } from './issue-history.service';
 import { IssueNotificationService } from 'src/project-module/notification/issue-notification.service';
+import { Sprint } from 'src/database/entities/project-module/Sprint.entity';
 
 // Định nghĩa kiểu dữ liệu cho kết quả trả về
 interface IssuesByStatus {
@@ -43,27 +44,50 @@ export class IssueBoardService {
    * @param workflowId ID của Workflow.
    * @returns Mảng các đối tượng chứa Status và Issues tương ứng.
    */
-  async getIssuesByWorkflowStatus(workflowId: number): Promise<BoardData> { // Thay đổi kiểu trả về
+  async getIssuesByWorkflowStatus(workflowId: number, projectId: number): Promise<BoardData> {
     // 1. Lấy tất cả các status thuộc về workflow này
     const statuses = await this.workflowStatusRepository.find({
       where: { workflow_id: workflowId },
       order: { order_index: 'ASC' },
     });
 
-    // ... (Kiểm tra NotFoundException) ...
+    if (!statuses || statuses.length === 0) {
+      throw new NotFoundException(`No statuses found for workflow ID ${workflowId}`);
+    }
+
+    // 2. Tìm sprint đang active trong project
+    const activeSprint = await this.dataSource.getRepository('Sprint').findOne({
+      where: { 
+        project_id: projectId,
+        status: 'active' 
+      },
+    });
 
     const intermediateResult: IssuesByStatus[] = [];
 
-    // 2. Với mỗi status, tìm các Issues đang ở trạng thái đó
+    // 3. Với mỗi status, tìm các Issues đang ở trạng thái đó
     for (const status of statuses) {
+      const whereClause: any = { 
+        current_status_id: status.id,
+        project_id: projectId,
+      };
+
+      // Chỉ lấy issues thuộc sprint active (nếu có)
+      if (activeSprint) {
+        whereClause.sprint_id = activeSprint.id;
+      } else {
+        whereClause.sprint_id = -1;
+      }
+
       const issues = await this.issueRepository.find({
-        where: { current_status_id: status.id },
+        where: whereClause,
         // QUAN TRỌNG: Cần thêm các relations để có đủ data cho Board
         relations: [
           'project', 
           'issue_type', 
           'assignees', 
           'epic_link', // Cần phải load thêm relation Epic
+          'sprint',
         ],
         order: { order_index: 'ASC' }, // Sắp xếp Issues trong Column
       });
@@ -76,7 +100,7 @@ export class IssueBoardService {
       });
     }
 
-    // 3. Chuyển đổi sang định dạng Board
+    // 4. Chuyển đổi sang định dạng Board
     return transformIssuesToBoardFormat(intermediateResult);
   }
 
