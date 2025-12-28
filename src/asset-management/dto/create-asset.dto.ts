@@ -28,6 +28,10 @@ export class CreateAssetDto {
   @IsNotEmpty()
   category_id: number;
 
+  @ApiProperty({ description: 'ID nhà cung cấp', example: 1 })
+  @IsNotEmpty()
+  supplier_id?: number;
+
   @ApiProperty({ description: 'Giá trị (VNĐ)', required: false })
   @IsOptional()
   @IsNumber()

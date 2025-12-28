@@ -77,7 +77,7 @@ export class AssetHandoverController {
   // DELETE /api/assignments/:id
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'MANAGER')
   @HttpCode(200)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);

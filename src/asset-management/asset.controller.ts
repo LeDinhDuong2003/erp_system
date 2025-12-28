@@ -35,11 +35,12 @@ export class AssetController {
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize: number,
     @Query('search') search?: string,
     @Query('categoryId') categoryId?: number,
+    @Query('supplierId') supplierId?: number,
     @Query('status') status?: AssetStatus,
     @Query('sortBy') sortBy = 'created_at',
     @Query('sortOrder') sortOrder: 'ASC' | 'DESC' = 'DESC',
   ) {
-    return this.assetService.findAll(page, pageSize, search, categoryId as any, status as any, sortBy, sortOrder);
+    return this.assetService.findAll(page, pageSize, search, categoryId as any, supplierId as any, status as any, sortBy, sortOrder);
   }
 
   @Get(':id')
@@ -63,7 +64,7 @@ export class AssetController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'MANAGER')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.assetService.remove(id);
   }
