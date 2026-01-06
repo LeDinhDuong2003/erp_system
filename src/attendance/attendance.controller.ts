@@ -233,6 +233,13 @@ export class AttendanceController {
     description: 'Start date (ISO 8601)',
   })
   @ApiQuery({ name: 'endDate', required: false, type: String, description: 'End date (ISO 8601)' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    enum: ['late', 'valid', 'missing'],
+    description: 'Filter by attendance status (late, valid, missing)'
+  })
   @ApiResponse({ status: 200, description: 'List of attendance records' })
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -240,9 +247,10 @@ export class AttendanceController {
     @Query('employeeId', new ParseIntPipe({ optional: true })) employeeId?: number,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('status') status?: string,
   ) {
     const skip = (page - 1) * pageSize;
-    return this.attendanceService.findAll(skip, pageSize, employeeId, startDate, endDate);
+    return this.attendanceService.findAll(skip, pageSize, employeeId, startDate, endDate, status);
   }
 
   @Get(':id')
