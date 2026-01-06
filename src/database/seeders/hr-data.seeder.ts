@@ -11,6 +11,7 @@ import { WorkScheduleSettings } from '../entities/WorkScheduleSettings.entity';
 import { SalarySettings } from '../entities/SalarySettings.entity';
 import { Attendance } from '../entities/Attendance.entity';
 import { EmployeeSalary, SalaryStatus } from '../entities/EmployeeSalary.entity';
+import { HrRequest } from '../entities/HrRequest.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -38,6 +39,8 @@ export class HrDataSeeder {
     private readonly attendanceRepository: Repository<Attendance>,
     @InjectRepository(EmployeeSalary)
     private readonly salaryRepository: Repository<EmployeeSalary>,
+    @InjectRepository(HrRequest)
+    private readonly hrRequestRepository: Repository<HrRequest>,
   ) {}
 
   async seedAll() {
@@ -76,6 +79,7 @@ export class HrDataSeeder {
       await this.seedAttendance(employees, 2025, 10);
       await this.seedAttendance(employees, 2025, 11);
       await this.seedAttendance(employees, 2025, 12);
+      await this.seedAttendance(employees, 2026, 1);
       this.logger.log('✓ Seeded attendance records for October, November, and December 2025');
 
       // 8. Seed Salary Records (2025)
@@ -755,14 +759,21 @@ export class HrDataSeeder {
         .execute();
       this.logger.log(`  Deleted ${deletedSalarySettings.affected || 0} salary settings`);
 
-      // 4. Delete employee positions (depends on Employee, Department, Position)
+      // 4. Delete HR requests (depends on Employee)
+      const deletedHrRequests = await this.hrRequestRepository
+        .createQueryBuilder()
+        .delete()
+        .execute();
+      this.logger.log(`  Deleted ${deletedHrRequests.affected || 0} HR requests`);
+
+      // 5. Delete employee positions (depends on Employee, Department, Position)
       const deletedEmployeePositions = await this.employeePositionRepository
         .createQueryBuilder()
         .delete()
         .execute();
       this.logger.log(`  Deleted ${deletedEmployeePositions.affected || 0} employee positions`);
 
-      // 5. Delete employee role assignments (depends on Employee, Role)
+      // 6. Delete employee role assignments (depends on Employee, Role)
       // Note: We don't delete all role assignments, only HR-related ones
       // Super admin role assignments should be kept
       // Get HR employees first before deleting them
@@ -779,7 +790,7 @@ export class HrDataSeeder {
         this.logger.log(`  Deleted ${deletedRoleAssignments.affected || 0} employee role assignments`);
       }
 
-      // 6. Delete employees (only HR-seeded employees, keep super admin)
+      // 7. Delete employees (only HR-seeded employees, keep super admin)
       const deletedEmployees = await this.employeeRepository
         .createQueryBuilder()
         .delete()
@@ -787,21 +798,21 @@ export class HrDataSeeder {
         .execute();
       this.logger.log(`  Deleted ${deletedEmployees.affected || 0} employees`);
 
-      // 7. Delete positions (depends on Department)
+      // 8. Delete positions (depends on Department)
       const deletedPositions = await this.positionRepository
         .createQueryBuilder()
         .delete()
         .execute();
       this.logger.log(`  Deleted ${deletedPositions.affected || 0} positions`);
 
-      // 8. Delete departments (handle parent-child relationships)
+      // 9. Delete departments (handle parent-child relationships)
       // First, set all parent_id to null to break relationships
       await this.departmentRepository
         .createQueryBuilder()
         .update(Department)
         .set({ parent_id: null })
         .execute();
-      
+
       // Then delete all departments
       const deletedDepartments = await this.departmentRepository
         .createQueryBuilder()
@@ -809,7 +820,7 @@ export class HrDataSeeder {
         .execute();
       this.logger.log(`  Deleted ${deletedDepartments.affected || 0} departments`);
 
-      // 9. Delete work schedule settings
+      // 10. Delete work schedule settings
       const deletedWorkSchedule = await this.workScheduleRepository
         .createQueryBuilder()
         .delete()

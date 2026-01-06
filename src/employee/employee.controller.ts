@@ -56,11 +56,15 @@ export class EmployeeController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateEmployeeDto: UpdateEmployeeDto) {
     return this.employeeService.update(id, updateEmployeeDto);
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.employeeService.remove(id);
   }

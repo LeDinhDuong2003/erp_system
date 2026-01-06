@@ -145,11 +145,29 @@ export class AttendanceService {
     employeeId?: number,
     startDate?: string,
     endDate?: string,
+    status?: string,
   ) {
     const where: any = {};
 
     if (employeeId) {
       where.employee_id = employeeId;
+    }
+
+    // Filter by status
+    if (status) {
+      if (status === 'late') {
+        // Đi muộn: có late_minutes > 0
+        where.late_minutes = MoreThanOrEqual(1);
+      } else if (status === 'valid') {
+        // Hợp lệ: có check_in, check_out và is_verified = true
+        where.check_in = MoreThanOrEqual(new Date('1970-01-01')); // Not null check
+        where.check_out = MoreThanOrEqual(new Date('1970-01-01')); // Not null check
+        where.is_verified = true;
+      } else if (status === 'missing') {
+        // Không chấm công: thiếu check_in hoặc check_out
+        // Using raw SQL query for OR condition on nullable fields
+        // This will be handled differently in the query
+      }
     }
 
     // Normalize dates for proper date comparison (only date part, no time)
@@ -176,16 +194,66 @@ export class AttendanceService {
       where.date = Between(start, today);
     }
 
-    const [attendances, total] = await Promise.all([
-      this.attendanceRepository.find({
-        where,
-        skip,
-        take,
-        relations: ['employee'],
-        order: { date: 'DESC' },
-      }),
-      this.attendanceRepository.count({ where }),
-    ]);
+    let attendances, total;
+
+    if (status === 'missing') {
+      // Handle missing status with OR condition using query builder
+      const queryBuilder = this.attendanceRepository
+        .createQueryBuilder('attendance')
+        .leftJoinAndSelect('attendance.employee', 'employee')
+        .where('attendance.check_in IS NULL OR attendance.check_out IS NULL');
+
+      if (employeeId) {
+        queryBuilder.andWhere('attendance.employee_id = :employeeId', { employeeId });
+      }
+
+      // Add date filters
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+        end.setDate(end.getDate() + 1);
+        end.setMilliseconds(end.getMilliseconds() - 1);
+
+        queryBuilder.andWhere('attendance.date BETWEEN :start AND :end', { start, end });
+      } else if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        queryBuilder.andWhere('attendance.date BETWEEN :start AND :today', { start, today });
+      }
+
+      queryBuilder
+        .orderBy('attendance.date', 'DESC')
+        .skip(skip)
+        .take(take);
+
+      const [result, count] = await Promise.all([
+        queryBuilder.getMany(),
+        queryBuilder.getCount(),
+      ]);
+
+      attendances = result;
+      total = count;
+    } else {
+      // Normal query for other statuses
+      const [result, count] = await Promise.all([
+        this.attendanceRepository.find({
+          where,
+          skip,
+          take,
+          relations: ['employee'],
+          order: { date: 'DESC' },
+        }),
+        this.attendanceRepository.count({ where }),
+      ]);
+
+      attendances = result;
+      total = count;
+    }
 
     return {
       data: attendances.map((attendance) => this.serializeAttendance(attendance)),
