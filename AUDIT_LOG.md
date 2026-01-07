@@ -6,12 +6,14 @@ Hệ thống audit log tự động ghi lại tất cả các API calls trong ba
 
 ## Tính năng
 
-- ✅ Tự động ghi log cho **tất cả** API calls
+- ✅ **Ghi log ngay khi request đến** (trước cả guards)
+- ✅ Tự động ghi log cho **tất cả action ngoại trừ GET** (POST, PUT, DELETE, PATCH)
 - ✅ Lưu thông tin: user, action, resource, IP, user agent, metadata
 - ✅ Xử lý bất đồng bộ (không làm chậm request)
 - ✅ Tự động loại bỏ thông tin nhạy cảm (password, token, etc.)
-- ✅ Ghi log cả thành công và lỗi
+- ✅ Ghi log cả thành công và lỗi (bao gồm unauthorized access)
 - ✅ Tính thời gian xử lý request
+- ✅ Theo dõi cả failed authentication/authorization attempts
 
 ## Cấu trúc
 
@@ -82,12 +84,26 @@ Mỗi audit log chứa:
 
 ## Cách hoạt động
 
-1. Khi có API call đến backend
-2. `AuditLogInterceptor` được trigger tự động
-3. Interceptor trích xuất thông tin từ request
-4. Request được xử lý bình thường
-5. Sau khi xử lý xong (success hoặc error), interceptor ghi log bất đồng bộ
-6. Log được lưu vào bảng `audit_logs` trong database
+### **Luồng xử lý audit log:**
+
+1. **Request đến** → `AuditLogMiddleware` ghi log ngay lập tức (trước guards)
+2. **Guards validation** → JWT Auth, Roles Guard, etc.
+3. **Business logic** → Controller xử lý request
+4. **Response/Error** → `AuditLogInterceptor` cập nhật log với kết quả cuối cùng
+
+### **Chi tiết:**
+
+#### **Phase 1 - Middleware (Ngay khi request đến):**
+- ✅ Ghi log tất cả non-GET requests
+- ✅ Chưa biết user authentication status
+- ✅ Metadata: `guards_pending: true`
+
+#### **Phase 2 - Interceptor (Sau khi xử lý xong):**
+- ✅ Cập nhật log với kết quả cuối cùng
+- ✅ Status code, duration, success/error
+- ✅ Metadata: `guards_passed: true/false`
+
+**Lưu ý**: Các request GET (như xem danh sách, chi tiết) sẽ không được ghi audit log để tránh spam log.
 
 ## Lưu ý
 

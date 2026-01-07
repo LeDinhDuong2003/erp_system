@@ -18,6 +18,15 @@ import * as bcrypt from 'bcrypt';
 export class HrDataSeeder {
   private readonly logger = new Logger(HrDataSeeder.name);
 
+  // Helper function to remove Vietnamese accents
+  private removeVietnameseAccents(str: string): string {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D');
+  }
+
   constructor(
     @InjectRepository(Department)
     private readonly departmentRepository: Repository<Department>,
@@ -382,7 +391,7 @@ export class HrDataSeeder {
       const middleName = middleNames[Math.floor(Math.random() * middleNames.length)];
       const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
       const fullName = `${lastName} ${middleName} ${firstName}`;
-      const username = `${lastName.toLowerCase()}${middleName.toLowerCase()}${firstName.toLowerCase()}${i}`;
+      const username = `${this.removeVietnameseAccents(lastName.toLowerCase())}${this.removeVietnameseAccents(middleName.toLowerCase())}${this.removeVietnameseAccents(firstName.toLowerCase())}${i}`;
       const email = `${username}@company.com`;
       const phone = `09${Math.floor(10000000 + Math.random() * 90000000)}`;
       
